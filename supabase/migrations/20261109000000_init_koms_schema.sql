@@ -2,3 +2,4 @@
 -- Description: Initial KOMS schema with multi-master dojo management, attendance, fees, schedules, announcements, and RLS policies
 
 \ir ../schema.sql
+

@@ -121,3 +121,4 @@ parentPort.on('message', ({ port, sab, connectionString }) => {
   Atomics.store(notify, 0, 999);
   Atomics.notify(notify, 0, 1);
 });
+

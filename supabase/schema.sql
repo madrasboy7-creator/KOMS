@@ -298,3 +298,4 @@ CREATE POLICY "Public read on announcements" ON public.announcements
 
 CREATE POLICY "Public read on masters info" ON public.masters
     FOR SELECT TO anon USING (true);
+
