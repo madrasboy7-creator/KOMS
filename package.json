@@ -18,13 +18,18 @@
     "karate",
     "master",
     "attendance",
-    "supabase",
+    "neon",
     "render"
   ],
   "author": "KOMS",
   "license": "ISC",
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
     "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
@@ -34,14 +39,7 @@
     "lucide-react": "^1.16.0",
     "pg": "^8.13.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/node": "^22.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.3.4",
+    "react-dom": "^19.0.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
     "vite": "^6.1.0"

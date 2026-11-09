@@ -2,3 +2,4 @@
 -- Description: Initial KOMS schema for Neon Serverless Postgres
 
 \ir ../schema.sql
+

@@ -99,3 +99,4 @@ JOIN (VALUES
     ('KOMS-STU-016', 'RCP-202611-0005', 1200, 'UPI', 'UPI-2991048123', '2026-11-01', 'Full fee settled', 'PAID')
 ) AS f(scode, receipt, paid, method, txref, pdate, rem, stat) ON s.student_code = f.scode
 ON CONFLICT (receipt_number) DO NOTHING;
+

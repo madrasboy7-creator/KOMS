@@ -236,3 +236,4 @@ CREATE INDEX IF NOT EXISTS idx_fee_waivers_master ON fee_waivers(master_id, bill
 CREATE INDEX IF NOT EXISTS idx_announcements_master ON announcements(master_id, status);
 CREATE INDEX IF NOT EXISTS idx_announcement_reads_announcement ON announcement_reads(announcement_id);
 CREATE INDEX IF NOT EXISTS idx_announcement_reads_student ON announcement_reads(student_id);
+
