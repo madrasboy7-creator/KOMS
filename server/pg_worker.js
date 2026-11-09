@@ -64,10 +64,9 @@ parentPort.on('message', ({ port, sab, connectionString }) => {
     ssl,
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 15000,
   });
 
-  // Ready signal
   port.on('message', async ({ type, sql, params }) => {
     try {
       if (type === 'exec') {
@@ -121,4 +120,3 @@ parentPort.on('message', ({ port, sab, connectionString }) => {
   Atomics.store(notify, 0, 999);
   Atomics.notify(notify, 0, 1);
 });
-

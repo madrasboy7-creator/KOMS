@@ -2,20 +2,15 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Worker, MessageChannel, receiveMessageOnPort } from 'node:worker_threads';
-import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Supabase / Render connection string
-const DATABASE_URL = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL;
-
-// Optional Supabase REST Client
-export const supabase = (process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY))
-  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
-  : null;
+// Neon PostgreSQL / Render connection string
+const DATABASE_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
 
 export const isPostgres = Boolean(DATABASE_URL);
+export const isNeon = Boolean(DATABASE_URL && DATABASE_URL.includes('neon.tech'));
 
 let dbInstance = null;
 
@@ -278,7 +273,6 @@ function createSqliteAdapter(dbPath) {
 let nodeSqliteCache = null;
 function requireNodeSqlite() {
   if (!nodeSqliteCache) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { DatabaseSync } = requireNativeSqlite();
     nodeSqliteCache = { DatabaseSync };
   }
@@ -294,9 +288,10 @@ export function initDatabase() {
   if (dbInstance) return dbInstance;
 
   if (DATABASE_URL) {
-    console.log('⚡ Connecting to Supabase PostgreSQL database...');
+    const isNeonEndpoint = DATABASE_URL.includes('neon.tech');
+    console.log(`⚡ Connecting to ${isNeonEndpoint ? 'Neon Serverless' : ''} PostgreSQL database...`);
     dbInstance = createPostgresAdapter(DATABASE_URL);
-    console.log('✅ Supabase PostgreSQL connected via connection pool.');
+    console.log(`✅ ${isNeonEndpoint ? 'Neon' : ''} PostgreSQL connected via connection pool.`);
   } else {
     const defaultDbPath = process.env.KOMS_DB_PATH || path.join(__dirname, '..', 'koms.db');
     console.log(`📁 Connecting to local SQLite database at: ${defaultDbPath}`);

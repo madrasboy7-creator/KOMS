@@ -1,10 +1,10 @@
 -- =============================================================================
--- KOMS: Karate Organization Management System — Supabase Seed Data
+-- KOMS: Karate Organization Management System — Neon PostgreSQL Seed Data
 -- =============================================================================
 
 -- 1. Insert Masters
 -- Password is 'master123' for all demo accounts
-INSERT INTO public.masters (name, email, password_hash, dojo_name, role)
+INSERT INTO masters (name, email, password_hash, dojo_name, role)
 VALUES 
     ('Grand Master / Chief Sensei', 'grandmaster@koms.dojo', '$2b$10$G1kmwfF5KEWqyNFA6DnMjOD6OIIbkmI11ajxx9unUiwZAJwhyoP9O', 'KOMS Headquarters', 'grand_master'),
     ('Sensei Rubeshwaren', 'rubeshwaren@koms.dojo', '$2b$10$G1kmwfF5KEWqyNFA6DnMjOD6OIIbkmI11ajxx9unUiwZAJwhyoP9O', 'Ranga Nagar', 'master'),
@@ -12,14 +12,14 @@ VALUES
 ON CONFLICT (email) DO NOTHING;
 
 -- 2. Insert Master Profiles
-INSERT INTO public.master_profiles (master_id, phone, bio, address, dojo_info, notification_email, notification_sms, fee_reminder_day, default_monthly_fee)
+INSERT INTO master_profiles (master_id, phone, bio, address, dojo_info, notification_email, notification_sms, fee_reminder_day, default_monthly_fee)
 SELECT id, '+91 98401 23456', '5th Dan Black Belt • Chief Instructor at Ranga Nagar Dojo', 'Mudichur Road, Chennai, Tamil Nadu', 'MASS DRAGON DOJO — Ranga Nagar Branch', 1, 1, 5, 1000
-FROM public.masters WHERE email = 'rubeshwaren@koms.dojo'
+FROM masters WHERE email = 'rubeshwaren@koms.dojo'
 ON CONFLICT (master_id) DO NOTHING;
 
--- 3. Insert Students for Sensei Rubeshwaren (master_id lookup)
-WITH m AS (SELECT id FROM public.masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1)
-INSERT INTO public.students (master_id, student_name, student_code, joining_date, status, rank, dob, phone, email, guardian_name, guardian_phone, address, monthly_fee, profile_image)
+-- 3. Insert Students for Sensei Rubeshwaren
+WITH m AS (SELECT id FROM masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1)
+INSERT INTO students (master_id, student_name, student_code, joining_date, status, rank, dob, phone, email, guardian_name, guardian_phone, address, monthly_fee, profile_image)
 SELECT 
     m.id, s.name, s.code, s.join_date::date, s.status, s.rank, s.dob::date, s.phone, s.email, s.gname, s.gphone, s.addr, s.fee, s.img
 FROM m, (VALUES
@@ -43,26 +43,26 @@ FROM m, (VALUES
 ON CONFLICT (master_id, student_code) DO NOTHING;
 
 -- 4. Insert Weekly Schedule (Saturday & Sunday, 18:30 - 20:30)
-WITH m AS (SELECT id FROM public.masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1)
-INSERT INTO public.weekly_schedules (master_id, effective_from, start_time, end_time, is_active)
+WITH m AS (SELECT id FROM masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1)
+INSERT INTO weekly_schedules (master_id, effective_from, start_time, end_time, is_active)
 SELECT m.id, '2026-11-01'::date, '18:30', '20:30', 1
 FROM m
-WHERE NOT EXISTS (SELECT 1 FROM public.weekly_schedules WHERE master_id = m.id);
+WHERE NOT EXISTS (SELECT 1 FROM weekly_schedules WHERE master_id = m.id);
 
 WITH ws AS (
-    SELECT id FROM public.weekly_schedules 
-    WHERE master_id = (SELECT id FROM public.masters WHERE email = 'rubeshwaren@koms.dojo')
+    SELECT id FROM weekly_schedules 
+    WHERE master_id = (SELECT id FROM masters WHERE email = 'rubeshwaren@koms.dojo')
     LIMIT 1
 )
-INSERT INTO public.schedule_days (weekly_schedule_id, weekday)
+INSERT INTO schedule_days (weekly_schedule_id, weekday)
 SELECT ws.id, d.w
 FROM ws, (VALUES (0), (6)) AS d(w)
 ON CONFLICT (weekly_schedule_id, weekday) DO NOTHING;
 
 -- 5. Insert Sample Class Sessions (Nov 2026)
-WITH m AS (SELECT id FROM public.masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1),
-     ws AS (SELECT id FROM public.weekly_schedules WHERE master_id = (SELECT id FROM m) LIMIT 1)
-INSERT INTO public.class_sessions (master_id, weekly_schedule_id, class_date, start_time, end_time, status, session_type, title, notes)
+WITH m AS (SELECT id FROM masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1),
+     ws AS (SELECT id FROM weekly_schedules WHERE master_id = (SELECT id FROM m) LIMIT 1)
+INSERT INTO class_sessions (master_id, weekly_schedule_id, class_date, start_time, end_time, status, session_type, title, notes)
 SELECT 
     m.id, ws.id, cs.cdate::date, '18:30', '20:30', cs.status, 'Regular Training', cs.title, cs.notes
 FROM m, ws, (VALUES
@@ -75,8 +75,8 @@ FROM m, ws, (VALUES
 ON CONFLICT (weekly_schedule_id, class_date) DO NOTHING;
 
 -- 6. Insert Announcements
-WITH m AS (SELECT id FROM public.masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1)
-INSERT INTO public.announcements (master_id, title, message, category, priority, target_audience, status)
+WITH m AS (SELECT id FROM masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1)
+INSERT INTO announcements (master_id, title, message, category, priority, target_audience, status)
 SELECT m.id, a.title, a.msg, a.cat, a.pri, 'all', 'PUBLISHED'
 FROM m, (VALUES
     ('Annual Belt Grading Ceremony 2026', 'The All-Dojo Winter Belt Grading evaluation will be held on December 14th. All eligible yellow belts and above must submit their registration forms before Dec 1st.', 'Grading', 'High'),
@@ -85,12 +85,12 @@ FROM m, (VALUES
 ) AS a(title, msg, cat, pri);
 
 -- 7. Insert Sample Fee Payments for Nov 2026
-WITH m AS (SELECT id FROM public.masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1)
-INSERT INTO public.fee_payments (master_id, student_id, receipt_number, billing_month, amount_due, amount_paid, payment_method, transaction_ref, payment_date, remarks, status)
+WITH m AS (SELECT id FROM masters WHERE email = 'rubeshwaren@koms.dojo' LIMIT 1)
+INSERT INTO fee_payments (master_id, student_id, receipt_number, billing_month, amount_due, amount_paid, payment_method, transaction_ref, payment_date, remarks, status)
 SELECT 
     m.id, s.id, f.receipt, '2026-11', s.monthly_fee, f.paid, f.method, f.txref, f.pdate::date, f.rem, f.stat
 FROM m
-JOIN public.students s ON s.master_id = m.id
+JOIN students s ON s.master_id = m.id
 JOIN (VALUES
     ('KOMS-STU-001', 'RCP-202611-0001', 1000, 'UPI', 'UPI-9840182819', '2026-11-02', 'Annual advance discount applied', 'PAID'),
     ('KOMS-STU-002', 'RCP-202611-0002', 1000, 'CASH', NULL, '2026-11-03', 'Handed over at dojo', 'PAID'),
@@ -99,4 +99,3 @@ JOIN (VALUES
     ('KOMS-STU-016', 'RCP-202611-0005', 1200, 'UPI', 'UPI-2991048123', '2026-11-01', 'Full fee settled', 'PAID')
 ) AS f(scode, receipt, paid, method, txref, pdate, rem, stat) ON s.student_code = f.scode
 ON CONFLICT (receipt_number) DO NOTHING;
-
