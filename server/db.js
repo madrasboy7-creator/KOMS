@@ -265,7 +265,168 @@ function createSqliteAdapter(dbPath) {
     CREATE INDEX IF NOT EXISTS idx_fee_payments_student ON fee_payments(student_id, billing_month);
     CREATE INDEX IF NOT EXISTS idx_fee_payments_master ON fee_payments(master_id, billing_month);
     CREATE INDEX IF NOT EXISTS idx_announcements_master ON announcements(master_id, status);
+
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('student', 'master', 'grandmaster')),
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('pending', 'pending_approval', 'active', 'suspended', 'rejected')),
+      member_id TEXT UNIQUE,
+      phone TEXT,
+      avatar TEXT,
+      dojo_id TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS dojos (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      badge TEXT DEFAULT '龍神',
+      master_id INTEGER,
+      head_instructor TEXT,
+      instructor_rank TEXT,
+      instructor_experience TEXT,
+      instructor_avatar TEXT,
+      instructor_bio TEXT,
+      instructor_qualifications TEXT,
+      instructor_achievements TEXT,
+      area TEXT,
+      city TEXT DEFAULT 'Chennai',
+      state TEXT DEFAULT 'Tamil Nadu',
+      country TEXT DEFAULT 'India',
+      pincode TEXT,
+      address TEXT,
+      landmarks TEXT,
+      phone TEXT,
+      email TEXT,
+      training_days TEXT,
+      class_timings TEXT,
+      levels_offered TEXT,
+      entry_fee INTEGER DEFAULT 1000,
+      monthly_fee INTEGER DEFAULT 800,
+      facilities TEXT,
+      description TEXT,
+      banner_url TEXT,
+      logo_url TEXT,
+      gallery TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'pending_approval', 'suspended', 'inactive')),
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS master_applications (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER,
+      full_name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      dob TEXT,
+      gender TEXT,
+      style TEXT,
+      dan_rank TEXT,
+      experience TEXT,
+      qualifications TEXT,
+      teaching_experience TEXT,
+      achievements TEXT,
+      about_master TEXT,
+      dojo_name TEXT NOT NULL,
+      dojo_address TEXT,
+      dojo_city TEXT,
+      dojo_state TEXT,
+      dojo_pincode TEXT,
+      dojo_phone TEXT,
+      dojo_email TEXT,
+      training_styles TEXT,
+      initial_schedule TEXT,
+      status TEXT NOT NULL DEFAULT 'pending_approval' CHECK(status IN ('pending_approval', 'approved', 'rejected')),
+      submitted_at TEXT DEFAULT (datetime('now')),
+      reviewed_by INTEGER,
+      reviewer_notes TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS join_requests (
+      id TEXT PRIMARY KEY,
+      student_user_id INTEGER,
+      student_name TEXT NOT NULL,
+      dojo_id TEXT,
+      dojo_name TEXT NOT NULL,
+      dob TEXT,
+      age TEXT,
+      gender TEXT,
+      blood_group TEXT,
+      guardian_name TEXT,
+      guardian_phone TEXT,
+      guardian_whatsapp TEXT,
+      email TEXT,
+      phone TEXT,
+      address TEXT,
+      training_category TEXT,
+      prior_experience TEXT,
+      status TEXT NOT NULL DEFAULT 'pending_review' CHECK(status IN ('pending_review', 'approved', 'rejected')),
+      submitted_at TEXT DEFAULT (datetime('now')),
+      reviewed_by INTEGER,
+      reviewer_notes TEXT,
+      assigned_belt TEXT,
+      assigned_monthly_fee INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS student_profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER UNIQUE,
+      student_code TEXT UNIQUE NOT NULL,
+      dojo_id TEXT,
+      master_id INTEGER,
+      name TEXT NOT NULL,
+      dob TEXT,
+      gender TEXT,
+      blood_group TEXT,
+      guardian_name TEXT,
+      guardian_phone TEXT,
+      guardian_whatsapp TEXT,
+      phone TEXT,
+      email TEXT,
+      address TEXT,
+      belt TEXT DEFAULT 'White Belt (Beginner)',
+      training_category TEXT,
+      prior_experience TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'pending', 'suspended', 'inactive')),
+      monthly_fee INTEGER DEFAULT 800,
+      joining_date TEXT DEFAULT (datetime('now')),
+      avatar TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      timestamp TEXT DEFAULT (datetime('now')),
+      user_id TEXT,
+      user_name TEXT,
+      user_role TEXT,
+      dojo_id TEXT,
+      action TEXT NOT NULL,
+      entity_type TEXT,
+      entity_id TEXT,
+      details TEXT,
+      reason TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    CREATE INDEX IF NOT EXISTS idx_users_role ON users(role, status);
+    CREATE INDEX IF NOT EXISTS idx_dojos_status ON dojos(status);
+    CREATE INDEX IF NOT EXISTS idx_join_requests_dojo ON join_requests(dojo_id, status);
+    CREATE INDEX IF NOT EXISTS idx_master_apps_status ON master_applications(status);
   `);
+
+  try {
+    const masterCols = db.prepare('PRAGMA table_info(masters)').all();
+    if (!masterCols.some(c => c.name === 'role')) {
+      db.exec("ALTER TABLE masters ADD COLUMN role TEXT NOT NULL DEFAULT 'master';");
+    }
+  } catch (_) {}
 
   return db;
 }

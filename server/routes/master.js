@@ -878,9 +878,6 @@ router.get('/attendance/records/:id/audit', (req, res) => {
   res.json({ audit_logs: logs });
 });
 
-export default router;
-
-
 /* ==========================================================
    MASTER PROFILE & SETTINGS APIS
    ========================================================== */
@@ -911,6 +908,9 @@ router.get('/profile', (req, res) => {
     ORDER BY class_date DESC LIMIT 5
   `).all(masterId);
 
+  // Also fetch Dojo record linked to this master
+  const dojoRow = db.prepare('SELECT * FROM dojos WHERE master_id = ? OR name = ?').get(masterId, master.dojo_name);
+
   res.json({
     master: {
       ...master,
@@ -918,12 +918,17 @@ router.get('/profile', (req, res) => {
       bio: profile?.bio || '5th Dan Black Belt • Chief Instructor',
       address: profile?.address || 'Mudichur, Chennai',
       dojo_info: profile?.dojo_info || 'MASS DRAGON DOJO — Ranga Nagar Branch',
+      rank: dojoRow?.instructor_rank || '5th Dan Black Belt',
+      experience: dojoRow?.instructor_experience || '16+ Years',
+      qualifications: dojoRow?.instructor_qualifications || 'Certified National Karate Referee',
+      achievements: dojoRow?.instructor_achievements || '',
+      avatar: dojoRow?.instructor_avatar || 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=300',
       notification_email: profile?.notification_email === 1,
       notification_sms: profile?.notification_sms === 1,
       fee_reminder_day: profile?.fee_reminder_day || 5,
       default_monthly_fee: profile?.default_monthly_fee || 1000,
     },
-    dojo: {
+    dojo: dojoRow || {
       name: master.dojo_name || 'Ranga Nagar Dojo',
       area: 'Mudichur, Chennai',
       head_sensei: master.name,
@@ -937,12 +942,28 @@ router.get('/profile', (req, res) => {
   });
 });
 
-// Update Master Profile
+// Update Master Profile (SYNCS IMMEDIATELY TO DOJO HEAD INSTRUCTOR PROFILE IN COMMON UI)
 router.put('/profile', (req, res) => {
   const masterId = req.dataMasterId || req.master.id;
-  const { phone, bio, address, dojo_info, notification_email, notification_sms, fee_reminder_day, default_monthly_fee } = req.body;
+  const {
+    name,
+    phone,
+    bio,
+    address,
+    dojo_info,
+    rank,
+    experience,
+    qualifications,
+    achievements,
+    avatar,
+    notification_email,
+    notification_sms,
+    fee_reminder_day,
+    default_monthly_fee
+  } = req.body;
 
   try {
+    // 1. Update master_profiles table
     db.prepare(`
       INSERT INTO master_profiles (
         master_id, phone, bio, address, dojo_info,
@@ -970,8 +991,314 @@ router.put('/profile', (req, res) => {
       default_monthly_fee !== undefined ? Number(default_monthly_fee) : 1000
     );
 
-    res.json({ success: true, message: 'Master preferences & profile updated.' });
+    // 2. Update masters table name if provided
+    if (name) {
+      db.prepare('UPDATE masters SET name = ? WHERE id = ?').run(name.trim(), masterId);
+    }
+
+    // 3. SYNC TO DOJO HEAD INSTRUCTOR PROFILE (Reflects live in Common UI -> Dojos)
+    db.prepare(`
+      UPDATE dojos
+      SET 
+        head_instructor = coalesce(?, head_instructor),
+        instructor_bio = coalesce(?, instructor_bio),
+        instructor_rank = coalesce(?, instructor_rank),
+        instructor_experience = coalesce(?, instructor_experience),
+        instructor_qualifications = coalesce(?, instructor_qualifications),
+        instructor_achievements = coalesce(?, instructor_achievements),
+        instructor_avatar = coalesce(?, instructor_avatar),
+        phone = coalesce(?, phone),
+        updated_at = datetime('now')
+      WHERE master_id = ? OR name = ?
+    `).run(
+      name || null,
+      bio || null,
+      rank || null,
+      experience || null,
+      qualifications || null,
+      achievements || null,
+      avatar || null,
+      phone || null,
+      masterId,
+      req.master.dojo_name
+    );
+
+    res.json({ success: true, message: 'Master profile updated and synchronized live to Common UI!' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update profile: ' + err.message });
   }
 });
+
+/* ==========================================================
+   DOJO PROFILE MANAGEMENT (SYNCS LIVE TO COMMON UI)
+   ========================================================== */
+
+// Get Dojo Profile
+router.get('/dojo-profile', (req, res) => {
+  const masterId = req.dataMasterId || req.master.id;
+  const dojoName = req.master.dojo_name;
+
+  try {
+    let dojo = db.prepare('SELECT * FROM dojos WHERE master_id = ? OR name = ?').get(masterId, dojoName);
+    if (!dojo) {
+      // Create initial dojo record for this master if none exists
+      const dojoId = 'dojo-' + (dojoName || 'branch').toLowerCase().replace(/[^a-z0-9]/g, '-');
+      db.prepare(`
+        INSERT INTO dojos (id, name, master_id, head_instructor, status)
+        VALUES (?, ?, ?, ?, 'active')
+      `).run(dojoId, dojoName || 'Main Dojo', masterId, req.master.name);
+      dojo = db.prepare('SELECT * FROM dojos WHERE id = ?').get(dojoId);
+    }
+    res.json({ dojo });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch dojo profile: ' + err.message });
+  }
+});
+
+// Update Dojo Profile (Live Sync to Common UI Dojos section)
+router.put('/dojo-profile', (req, res) => {
+  const masterId = req.dataMasterId || req.master.id;
+  const dojoName = req.master.dojo_name;
+  const {
+    name,
+    badge,
+    area,
+    city,
+    state,
+    pincode,
+    address,
+    landmarks,
+    phone,
+    email,
+    training_days,
+    class_timings,
+    entry_fee,
+    monthly_fee,
+    facilities,
+    description,
+    banner_url,
+    logo_url
+  } = req.body;
+
+  try {
+    db.prepare(`
+      UPDATE dojos
+      SET 
+        name = coalesce(?, name),
+        badge = coalesce(?, badge),
+        area = coalesce(?, area),
+        city = coalesce(?, city),
+        state = coalesce(?, state),
+        pincode = coalesce(?, pincode),
+        address = coalesce(?, address),
+        landmarks = coalesce(?, landmarks),
+        phone = coalesce(?, phone),
+        email = coalesce(?, email),
+        training_days = coalesce(?, training_days),
+        class_timings = coalesce(?, class_timings),
+        entry_fee = coalesce(?, entry_fee),
+        monthly_fee = coalesce(?, monthly_fee),
+        facilities = coalesce(?, facilities),
+        description = coalesce(?, description),
+        banner_url = coalesce(?, banner_url),
+        logo_url = coalesce(?, logo_url),
+        updated_at = datetime('now')
+      WHERE master_id = ? OR name = ?
+    `).run(
+      name || null,
+      badge || null,
+      area || null,
+      city || null,
+      state || null,
+      pincode || null,
+      address || null,
+      landmarks || null,
+      phone || null,
+      email || null,
+      training_days || null,
+      class_timings || null,
+      entry_fee !== undefined ? Number(entry_fee) : null,
+      monthly_fee !== undefined ? Number(monthly_fee) : null,
+      facilities || null,
+      description || null,
+      banner_url || null,
+      logo_url || null,
+      masterId,
+      dojoName
+    );
+
+    res.json({ success: true, message: 'Dojo Profile updated live! Changes will appear in Common UI immediately.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update dojo profile: ' + err.message });
+  }
+});
+
+/* ==========================================================
+   JOIN REQUESTS MANAGEMENT (STUDENT APPROVAL WORKFLOW)
+   ========================================================== */
+
+// GET /api/master/join-requests — List requests for this Dojo
+router.get('/join-requests', (req, res) => {
+  const dojoName = req.master.dojo_name;
+
+  try {
+    const requests = db.prepare(`
+      SELECT * FROM join_requests
+      WHERE dojo_name LIKE ? OR dojo_id = ? OR status = 'pending_review'
+      ORDER BY submitted_at DESC
+    `).all(`%${dojoName}%`, req.master.dojo_id || 'dojo-ranganagar');
+
+    res.json({ requests });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch join requests: ' + err.message });
+  }
+});
+
+// POST /api/master/join-requests/:id/approve — Approve Student
+router.post('/join-requests/:id/approve', (req, res) => {
+  const masterId = req.dataMasterId || req.master.id;
+  const reqId = req.params.id;
+  const { assigned_belt, assigned_monthly_fee, notes } = req.body;
+
+  try {
+    const joinReq = db.prepare('SELECT * FROM join_requests WHERE id = ?').get(reqId);
+    if (!joinReq) {
+      return res.status(404).json({ error: 'Join request not found.' });
+    }
+
+    db.exec('BEGIN IMMEDIATE;');
+
+    // 1. Mark request approved
+    db.prepare(`
+      UPDATE join_requests
+      SET status = 'approved',
+          reviewed_by = ?,
+          reviewer_notes = ?,
+          assigned_belt = ?,
+          assigned_monthly_fee = ?
+      WHERE id = ?
+    `).run(
+      masterId,
+      notes || 'Approved by Dojo Master',
+      assigned_belt || 'White Belt (Beginner)',
+      Number(assigned_monthly_fee) || 800,
+      reqId
+    );
+
+    // 2. Activate user in users table
+    if (joinReq.student_user_id) {
+      db.prepare(`
+        UPDATE users
+        SET status = 'active', updated_at = datetime('now')
+        WHERE id = ?
+      `).run(joinReq.student_user_id);
+    }
+
+    // 3. Generate student code & create record in students table
+    const stuCount = db.prepare('SELECT COUNT(*) as count FROM students').get()?.count || 0;
+    const studentCode = `KOMS-STU-${String(stuCount + 1).padStart(3, '0')}`;
+
+    db.prepare(`
+      INSERT INTO students (
+        master_id, student_name, student_code, joining_date, status, rank,
+        dob, phone, email, guardian_name, guardian_phone, address, monthly_fee
+      ) VALUES (?, ?, ?, date('now'), 'active', ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      masterId,
+      joinReq.student_name,
+      studentCode,
+      assigned_belt || 'White Belt (Beginner)',
+      joinReq.dob || null,
+      joinReq.phone || null,
+      joinReq.email || null,
+      joinReq.guardian_name || null,
+      joinReq.guardian_phone || null,
+      joinReq.address || null,
+      Number(assigned_monthly_fee) || 800
+    );
+
+    // 4. Create student_profiles entry
+    db.prepare(`
+      INSERT OR REPLACE INTO student_profiles (
+        user_id, student_code, dojo_id, master_id, name, dob, gender,
+        blood_group, guardian_name, guardian_phone, guardian_whatsapp,
+        phone, email, address, belt, training_category, prior_experience,
+        status, monthly_fee, joining_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, date('now'))
+    `).run(
+      joinReq.student_user_id || null,
+      studentCode,
+      joinReq.dojo_id || 'dojo-ranganagar',
+      masterId,
+      joinReq.student_name,
+      joinReq.dob || null,
+      joinReq.gender || null,
+      joinReq.blood_group || null,
+      joinReq.guardian_name || null,
+      joinReq.guardian_phone || null,
+      joinReq.guardian_whatsapp || null,
+      joinReq.phone || null,
+      joinReq.email || null,
+      joinReq.address || null,
+      assigned_belt || 'White Belt (Beginner)',
+      joinReq.training_category || 'Traditional Karate',
+      joinReq.prior_experience || 'None',
+      Number(assigned_monthly_fee) || 800
+    );
+
+    db.exec('COMMIT;');
+
+    res.json({
+      success: true,
+      message: `Student ${joinReq.student_name} approved! Assigned Student Code: ${studentCode}. Account is now active.`,
+      studentCode
+    });
+  } catch (err) {
+    try { db.exec('ROLLBACK;'); } catch (_) {}
+    console.error('Approve join request error:', err);
+    res.status(500).json({ error: 'Failed to approve join request: ' + err.message });
+  }
+});
+
+// POST /api/master/join-requests/:id/reject — Reject Student
+router.post('/join-requests/:id/reject', (req, res) => {
+  const masterId = req.dataMasterId || req.master.id;
+  const reqId = req.params.id;
+  const { notes } = req.body;
+
+  try {
+    const joinReq = db.prepare('SELECT * FROM join_requests WHERE id = ?').get(reqId);
+    if (!joinReq) {
+      return res.status(404).json({ error: 'Join request not found.' });
+    }
+
+    db.exec('BEGIN IMMEDIATE;');
+
+    db.prepare(`
+      UPDATE join_requests
+      SET status = 'rejected', reviewed_by = ?, reviewer_notes = ?
+      WHERE id = ?
+    `).run(masterId, notes || 'Rejected by Dojo Master', reqId);
+
+    if (joinReq.student_user_id) {
+      db.prepare(`
+        UPDATE users
+        SET status = 'rejected', updated_at = datetime('now')
+        WHERE id = ?
+      `).run(joinReq.student_user_id);
+    }
+
+    db.exec('COMMIT;');
+
+    res.json({
+      success: true,
+      message: `Join request for ${joinReq.student_name} rejected.`
+    });
+  } catch (err) {
+    try { db.exec('ROLLBACK;'); } catch (_) {}
+    res.status(500).json({ error: 'Failed to reject join request: ' + err.message });
+  }
+});
+
+export default router;
+

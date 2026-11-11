@@ -155,11 +155,21 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
   const [dateOfJoining, setDateOfJoining] = useState(new Date().toISOString().slice(0, 10))
 
   // Login Form State
-  const [loginIdentifier, setLoginIdentifier] = useState('')
+  const [selectedPortal, setSelectedPortal] = useState<'student' | 'master' | 'grandmaster'>('student')
+  const [loginIdentifier, setLoginIdentifier] = useState(() => localStorage.getItem('koms_remembered_identifier') || '')
   const [loginPassword, setLoginPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
+  const [loginSubmitting, setLoginSubmitting] = useState(false)
   const [loginError, setLoginError] = useState('')
   const [loginSuccess, setLoginSuccess] = useState('')
+
+  // Student & Master Registration Password Fields
+  const [studentPassword, setStudentPassword] = useState('')
+  const [studentConfirmPassword, setStudentConfirmPassword] = useState('')
+  const [studentRegModalOpen, setStudentRegModalOpen] = useState(false)
+  const [regPassword, setRegPassword] = useState('')
+  const [regConfirmPassword, setRegConfirmPassword] = useState('')
 
   // CMS Edit State (Grand Master Control Panel)
   const [cmsHeadline, setCmsHeadline] = useState(cmsData.heroHeadline)
@@ -227,7 +237,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
   }, [galleryCategoryFilter])
 
   // Handle Registration Enquiry Submission
-  function handleJoinSubmit(e: React.FormEvent) {
+  async function handleJoinSubmit(e: React.FormEvent) {
     e.preventDefault()
     setJoinError('')
 
@@ -248,75 +258,150 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
       return
     }
 
-    const targetDojo = publicDojos.find((d) => d.id === joinDojoId) || publicDojos[0]
+    const targetDojo = publicDojos.find((d) => d.id === joinDojoId) || publicDojos[0] || {
+      id: 'dojo-ranganagar',
+      name: 'MASS DRAGON DOJO — Ranga Nagar Dojo',
+      area: 'Mudichur, Chennai'
+    }
 
-    const newEnquiry = komsStore.submitRegistrationEnquiry({
-      studentName: studentFullName.trim(),
-      dateOfBirth: studentDob.trim() || 'Not specified',
-      age: studentAge.trim() || 'Youth',
-      gender: studentGender,
-      bloodGroup: studentBloodGroup,
-      fatherName: guardianName.trim(),
-      guardianPhone: guardianPhone.trim(),
-      guardianWhatsapp: guardianWhatsapp.trim() || guardianPhone.trim(),
-      email: applicantEmail.trim(),
-      address: residentialAddress.trim() || targetDojo.area,
-      dojoId: targetDojo.id,
-      dojoName: targetDojo.name,
-      trainingCategory: joinCategory,
-      priorExperience: regMethod === 'existing_student' ? `Transfer from ${previousDojo} (${currentBeltGrade})` : priorExperience.trim(),
-    })
+    try {
+      // 1. Submit to centralized backend API
+      const res = await fetch('/api/auth/register-student', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: studentFullName.trim(),
+          email: applicantEmail.trim(),
+          phone: guardianPhone.trim(),
+          dob: studentDob.trim() || '2012-05-10',
+          gender: studentGender,
+          blood_group: studentBloodGroup,
+          guardian_name: guardianName.trim(),
+          guardian_phone: guardianPhone.trim(),
+          guardian_whatsapp: guardianWhatsapp.trim() || guardianPhone.trim(),
+          address: residentialAddress.trim() || targetDojo.area,
+          password: studentPassword.trim() || 'student123',
+          dojo_id: targetDojo.id,
+          dojo_name: targetDojo.name,
+          training_category: joinCategory,
+          prior_experience: regMethod === 'existing_student' ? `Transfer from ${previousDojo} (${currentBeltGrade})` : priorExperience.trim(),
+        })
+      })
 
-    // Also register in studentRegRequests for formal Master approval with Method 1 or Method 2
-    komsStore.submitStudentRegistration({
-      method: regMethod,
-      fullName: studentFullName.trim(),
-      dob: studentDob.trim() || '2012-05-10',
-      age: parseInt(studentAge) || 12,
-      gender: studentGender as any,
-      bloodGroup: studentBloodGroup,
-      dateOfJoining: dateOfJoining || new Date().toISOString().slice(0, 10),
-      address: residentialAddress.trim() || targetDojo.area,
-      fatherName: guardianName.trim() || 'Guardian',
-      motherName: 'Mother',
-      mobile: guardianPhone.trim(),
-      whatsapp: guardianWhatsapp.trim() || guardianPhone.trim(),
-      targetDojoId: targetDojo.id,
-      targetDojoName: targetDojo.name,
-      previousDojo: regMethod === 'existing_student' ? previousDojo : undefined,
-      previousMaster: regMethod === 'existing_student' ? previousMaster : undefined,
-      currentBeltGrade: regMethod === 'existing_student' ? currentBeltGrade : 'White Belt',
-      yearsOfPractice: regMethod === 'existing_student' ? parseInt(yearsOfKarate) || 1 : 0,
-      isTransfer: regMethod === 'existing_student',
-      entryFeeExempt: regMethod === 'existing_student', // Zero duplicate entry fee!
-    })
+      const data = await res.json()
+      if (!res.ok) {
+        setJoinError(data.error || 'Failed to submit registration. Please verify details.')
+        return
+      }
 
-    setJoinSubmissionResult(newEnquiry)
+      // 2. Also register in local store for seamless UI updates
+      const newEnquiry = komsStore.submitRegistrationEnquiry({
+        studentName: studentFullName.trim(),
+        dateOfBirth: studentDob.trim() || 'Not specified',
+        age: studentAge.trim() || 'Youth',
+        gender: studentGender,
+        bloodGroup: studentBloodGroup,
+        fatherName: guardianName.trim(),
+        guardianPhone: guardianPhone.trim(),
+        guardianWhatsapp: guardianWhatsapp.trim() || guardianPhone.trim(),
+        email: applicantEmail.trim(),
+        address: residentialAddress.trim() || targetDojo.area,
+        dojoId: targetDojo.id,
+        dojoName: targetDojo.name,
+        trainingCategory: joinCategory,
+        priorExperience: regMethod === 'existing_student' ? `Transfer from ${previousDojo} (${currentBeltGrade})` : priorExperience.trim(),
+      })
+
+      setJoinSubmissionResult(newEnquiry)
+    } catch (err: any) {
+      console.warn('Backend sync warning, completing with local store:', err.message)
+      const newEnquiry = komsStore.submitRegistrationEnquiry({
+        studentName: studentFullName.trim(),
+        dateOfBirth: studentDob.trim() || 'Not specified',
+        age: studentAge.trim() || 'Youth',
+        gender: studentGender,
+        bloodGroup: studentBloodGroup,
+        fatherName: guardianName.trim(),
+        guardianPhone: guardianPhone.trim(),
+        guardianWhatsapp: guardianWhatsapp.trim() || guardianPhone.trim(),
+        email: applicantEmail.trim(),
+        address: residentialAddress.trim() || targetDojo.area,
+        dojoId: targetDojo.id,
+        dojoName: targetDojo.name,
+        trainingCategory: joinCategory,
+        priorExperience: priorExperience.trim(),
+      })
+      setJoinSubmissionResult(newEnquiry)
+    }
   }
 
-  function handleRegisterDojoSubmit(e: React.FormEvent) {
+  async function handleRegisterDojoSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!regDojoName.trim() || !regMasterName.trim() || !regPhone.trim()) {
       alert('Please fill out all required dojo name, Master name, and mobile number.')
       return
     }
 
-    const newDojo = komsStore.registerNewDojo({
-      name: regDojoName.trim(),
-      masterName: regMasterName.trim(),
-      masterEmail: regEmail.trim() || 'master@koms.in',
-      masterPhone: regPhone.trim(),
-      area: regArea.trim() || 'Chennai',
-      address: regAddress.trim() || 'Chennai, Tamil Nadu',
-      karateStyle: regKarateStyle.trim(),
-      entryFee: Number(regEntryFee) || 1000,
-      monthlyFee: Number(regMonthlyFee) || 800,
-      classTimings: regTimings.trim(),
-      weeklySchedule: ['Saturday', 'Sunday'],
-      achievements: [],
-    })
+    try {
+      const res = await fetch('/api/auth/register-master', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: regMasterName.trim(),
+          email: regEmail.trim() || `master.${Date.now()}@koms.in`,
+          phone: regPhone.trim(),
+          password: regPassword.trim() || 'master123',
+          style: regKarateStyle.trim(),
+          experience: regExperience.trim(),
+          dojo_name: regDojoName.trim(),
+          dojo_address: regAddress.trim() || 'Chennai, Tamil Nadu',
+          dojo_city: regArea.trim() || 'Chennai',
+          initial_schedule: regTimings.trim(),
+          entry_fee: Number(regEntryFee) || 1000,
+          monthly_fee: Number(regMonthlyFee) || 800
+        })
+      })
 
-    setDojoRegSubmitted(newDojo.registrationId)
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || 'Failed to register master.')
+        return
+      }
+
+      const newDojo = komsStore.registerNewDojo({
+        name: regDojoName.trim(),
+        masterName: regMasterName.trim(),
+        masterEmail: regEmail.trim() || 'master@koms.in',
+        masterPhone: regPhone.trim(),
+        area: regArea.trim() || 'Chennai',
+        address: regAddress.trim() || 'Chennai, Tamil Nadu',
+        karateStyle: regKarateStyle.trim(),
+        entryFee: Number(regEntryFee) || 1000,
+        monthlyFee: Number(regMonthlyFee) || 800,
+        classTimings: regTimings.trim(),
+        weeklySchedule: ['Saturday', 'Sunday'],
+        achievements: [],
+      })
+
+      setDojoRegSubmitted(data.appId || newDojo.registrationId)
+    } catch (err: any) {
+      console.warn('Backend sync warning, completing with local store:', err.message)
+      const newDojo = komsStore.registerNewDojo({
+        name: regDojoName.trim(),
+        masterName: regMasterName.trim(),
+        masterEmail: regEmail.trim() || 'master@koms.in',
+        masterPhone: regPhone.trim(),
+        area: regArea.trim() || 'Chennai',
+        address: regAddress.trim() || 'Chennai, Tamil Nadu',
+        karateStyle: regKarateStyle.trim(),
+        entryFee: Number(regEntryFee) || 1000,
+        monthlyFee: Number(regMonthlyFee) || 800,
+        classTimings: regTimings.trim(),
+        weeklySchedule: ['Saturday', 'Sunday'],
+        achievements: [],
+      })
+      setDojoRegSubmitted(newDojo.registrationId)
+    }
   }
 
   // Handle Application Tracking Lookup
@@ -331,29 +416,61 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
     }
   }
 
-  // Handle Login Submission
-  function handleLogin(e: React.FormEvent) {
+  // Handle Login Submission via Centralized Backend
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoginError('')
     setLoginSuccess('')
 
     if (!loginIdentifier.trim()) {
-      setLoginError('Please enter your Email or User ID / Student Name.')
+      setLoginError('Please enter your Email or Member ID.')
       return
     }
     if (!loginPassword.trim()) {
-      setLoginError('Please enter your password (or Date of Birth for students).')
+      setLoginError('Please enter your password.')
       return
     }
 
-    const res = komsStore.loginWithCredentials(loginIdentifier, loginPassword)
-    if (res.success) {
-      setLoginSuccess(res.message)
+    setLoginSubmitting(true)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loginIdentifier.trim(),
+          password: loginPassword.trim(),
+          portalPreference: selectedPortal
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setLoginError(data.error || 'Authentication failed. Please verify credentials.')
+        setLoginSubmitting(false)
+        return
+      }
+
+      setLoginSuccess(`Welcome ${data.user.name}! Opening authorized ${data.user.role.toUpperCase()} portal…`)
+      komsStore.loginAsUser(data.user, data.token)
+      if (rememberMe) {
+        localStorage.setItem('koms_remembered_identifier', loginIdentifier.trim())
+      }
       setTimeout(() => {
         onLoginSuccess()
       }, 400)
-    } else {
-      setLoginError(res.message)
+    } catch (err: any) {
+      // Fallback to local store credential verification if offline
+      const storeRes = komsStore.loginWithCredentials(loginIdentifier, loginPassword)
+      if (storeRes.success) {
+        setLoginSuccess(storeRes.message)
+        setTimeout(() => {
+          onLoginSuccess()
+        }, 400)
+      } else {
+        setLoginError(err.message || storeRes.message)
+      }
+    } finally {
+      setLoginSubmitting(false)
     }
   }
 
@@ -636,6 +753,36 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                   <span>Discover Our Tradition</span>
                   <span className="pill-arrow">→</span>
                 </button>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
+                  <button
+                    type="button"
+                    className="koms-btn koms-btn--primary"
+                    style={{ background: '#ef4444', color: '#fff', fontWeight: 800, padding: '10px 18px', borderRadius: '10px', fontSize: '13px', boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)' }}
+                    onClick={() => navigateTo('join-us')}
+                  >
+                    🎓 Register as Student
+                  </button>
+                  <button
+                    type="button"
+                    className="koms-btn"
+                    style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', fontWeight: 800, padding: '10px 18px', borderRadius: '10px', fontSize: '13px' }}
+                    onClick={() => {
+                      setDojoRegSubmitted(null)
+                      setNewDojoModalOpen(true)
+                    }}
+                  >
+                    🥋 Register as Master
+                  </button>
+                  <button
+                    type="button"
+                    className="koms-btn"
+                    style={{ background: '#0a0d16', color: '#fca5a5', border: '1px solid #ef4444', fontWeight: 800, padding: '10px 18px', borderRadius: '10px', fontSize: '13px' }}
+                    onClick={() => navigateTo('login')}
+                  >
+                    🔐 Portal Login
+                  </button>
+                </div>
 
                 <div className="home-hero-quote-box">
                   <span className="hero-quote-italic">
@@ -1889,6 +2036,25 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                             onChange={(e) => setPriorExperience(e.target.value)}
                           />
                         </div>
+                        <div className="form-group">
+                          <label>Create Student Portal Password *</label>
+                          <input
+                            type="password"
+                            placeholder="At least 6 characters"
+                            value={studentPassword}
+                            onChange={(e) => setStudentPassword(e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Confirm Password *</label>
+                          <input
+                            type="password"
+                            placeholder="Re-enter password"
+                            value={studentConfirmPassword}
+                            onChange={(e) => setStudentConfirmPassword(e.target.value)}
+                          />
+                        </div>
+
                         <div className="form-group full" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
                           <button
                             type="button"
@@ -2059,6 +2225,25 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                             </div>
                           </div>
                         )}
+                        <div className="form-group">
+                          <label>Create Student Portal Password *</label>
+                          <input
+                            type="password"
+                            placeholder="At least 6 characters"
+                            value={studentPassword}
+                            onChange={(e) => setStudentPassword(e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Confirm Password *</label>
+                          <input
+                            type="password"
+                            placeholder="Re-enter password"
+                            value={studentConfirmPassword}
+                            onChange={(e) => setStudentConfirmPassword(e.target.value)}
+                          />
+                        </div>
+
                         <div className="form-group full" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
                           <button
                             type="button"
@@ -2281,102 +2466,176 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
         )}
 
         {/* =====================================================================
-            TAB 9: GRAND MASTER (GM) CONTROL ACCESS
+            TAB 9: CENTRALIZED ROLE-BASED PORTAL LOGIN (STUDENT / MASTER / GM)
             ===================================================================== */}
         {activeTab === 'login' && (
           <section className="home-tab-pane">
-            <div className="login-container gm-login-container">
-              <div className="login-head">
-                <div className="gm-shield-badge">
-                  <span>👑</span>
+            <div className="login-container gm-login-container" style={{ maxWidth: '520px', margin: '0 auto', background: '#0b1120', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '24px', padding: '32px 28px', boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)' }}>
+              
+              {/* Portal Selector Header */}
+              <div className="login-head" style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <div style={{ width: '56px', height: '56px', margin: '0 auto 12px', borderRadius: '50%', background: 'linear-gradient(135deg, #ef4444, #991b1b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', boxShadow: '0 8px 20px rgba(239, 68, 68, 0.4)' }}>
+                  {selectedPortal === 'grandmaster' ? '👑' : selectedPortal === 'master' ? '🥋' : '🎓'}
                 </div>
-                <h2>Grand Master (GM) Portal Access</h2>
-                <p>Executive Organization Management & Dojo Operations</p>
-              </div>
-
-              {/* Strict GM Access Restriction Notice */}
-              <div className="gm-access-notice">
-                <div className="gm-notice-header">
-                  <Icon name="shield" size={16} />
-                  <strong>Grand Master Access Restriction</strong>
-                </div>
-                <p>
-                  Organization controls (including Attendance Dashboard & Logs, Student Admissions, Master Registrations, Fee Structures, and Multi-Dojo Operations) are restricted and <strong>accessed ONLY by the Grand Master (GM)</strong>.
+                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+                  {selectedPortal === 'grandmaster'
+                    ? 'Grand Master Portal'
+                    : selectedPortal === 'master'
+                    ? 'Dojo Master Portal'
+                    : 'Student & Member Portal'}
+                </h2>
+                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>
+                  Karate Organization Management System • Unified Authentication
                 </p>
               </div>
 
+              {/* Three Portal Destination Preference Tabs */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '22px', background: 'rgba(15, 23, 42, 0.8)', padding: '6px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: '10px 6px',
+                    borderRadius: '10px',
+                    border: selectedPortal === 'student' ? '1px solid #ef4444' : '1px solid transparent',
+                    background: selectedPortal === 'student' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                    color: selectedPortal === 'student' ? '#fca5a5' : '#94a3b8',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onClick={() => {
+                    setSelectedPortal('student')
+                    setLoginError('')
+                  }}
+                >
+                  <span style={{ fontSize: '16px' }}>🎓</span>
+                  <span>Student</span>
+                </button>
+
+                <button
+                  type="button"
+                  style={{
+                    padding: '10px 6px',
+                    borderRadius: '10px',
+                    border: selectedPortal === 'master' ? '1px solid #ef4444' : '1px solid transparent',
+                    background: selectedPortal === 'master' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                    color: selectedPortal === 'master' ? '#fca5a5' : '#94a3b8',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onClick={() => {
+                    setSelectedPortal('master')
+                    setLoginError('')
+                  }}
+                >
+                  <span style={{ fontSize: '16px' }}>🥋</span>
+                  <span>Master</span>
+                </button>
+
+                <button
+                  type="button"
+                  style={{
+                    padding: '10px 6px',
+                    borderRadius: '10px',
+                    border: selectedPortal === 'grandmaster' ? '1px solid #ef4444' : '1px solid transparent',
+                    background: selectedPortal === 'grandmaster' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                    color: selectedPortal === 'grandmaster' ? '#fca5a5' : '#94a3b8',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onClick={() => {
+                    setSelectedPortal('grandmaster')
+                    setLoginError('')
+                  }}
+                >
+                  <span style={{ fontSize: '16px' }}>👑</span>
+                  <span>Grand Master</span>
+                </button>
+              </div>
+
+              {/* Portal Description Pill */}
+              <div style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '10px 14px', marginBottom: '18px', fontSize: '12px', color: '#cbd5e1' }}>
+                {selectedPortal === 'student' && '🎓 View attendance history, belt progression, fee payment receipts, and weekly dojo class schedule.'}
+                {selectedPortal === 'master' && '🥋 Manage dojo attendance, record fee payments, configure weekly schedules, and approve student join requests.'}
+                {selectedPortal === 'grandmaster' && '👑 Executive governance: approve new Dojo & Master applications, inspect audit logs, and view organizational reports.'}
+              </div>
+
               {loginError && (
-                <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#fca5a5', fontSize: '12px', fontWeight: 600, marginBottom: '16px' }}>
-                  {loginError}
+                <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#fca5a5', fontSize: '12.5px', fontWeight: 600, marginBottom: '16px', lineHeight: '1.5' }}>
+                  ⚠️ {loginError}
                 </div>
               )}
 
               {loginSuccess && (
-                <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', color: '#86efac', fontSize: '12px', fontWeight: 600, marginBottom: '16px' }}>
-                  {loginSuccess}
+                <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22c55e', color: '#86efac', fontSize: '12.5px', fontWeight: 600, marginBottom: '16px', lineHeight: '1.5' }}>
+                  ✓ {loginSuccess}
                 </div>
               )}
 
-              {/* 1-Click Authorized GM Enter */}
-              <div className="gm-direct-action-card">
-                <div className="gm-direct-text">
-                  <strong style={{ display: 'block', fontSize: '14.5px', color: '#fbbf24' }}>
-                    👑 Hanshi Grand Master Executive Access
-                  </strong>
-                  <small style={{ color: '#94a3b8' }}>
-                    Direct entry for authorized Grand Master to open all controls
-                  </small>
-                </div>
-                <button
-                  type="button"
-                  className="koms-red-login-btn"
-                  style={{ padding: '10px 22px', fontSize: '14px' }}
-                  onClick={() => quickLoginRole('grandmaster')}
-                >
-                  Enter GM Controls →
-                </button>
-              </div>
-
-              <div className="gm-login-divider">
-                <span>OR SIGN IN WITH GRAND MASTER CREDENTIALS</span>
-              </div>
-
               <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div className="form-group">
-                  <label>Grand Master ID / Official Email</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>
+                    {selectedPortal === 'student' ? 'Student Email or Member ID *' : selectedPortal === 'master' ? 'Sensei Email or Member ID *' : 'Grand Master Email / ID *'}
+                  </label>
                   <input
                     type="text"
-                    placeholder="grandmaster@koms.in or admin"
+                    placeholder={
+                      selectedPortal === 'student'
+                        ? 'arjun@test.com or STU-759663'
+                        : selectedPortal === 'master'
+                        ? 'rubeshwaren@koms.in or MST-001'
+                        : 'grandmaster@koms.in'
+                    }
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
+                    style={{ width: '100%', height: '44px', padding: '0 14px', borderRadius: '10px', background: '#070b13', border: '1px solid #334155', color: '#ffffff', fontSize: '13.5px' }}
                     required
                   />
                 </div>
 
                 <div className="form-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label>Master Security Password</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#cbd5e1' }}>
+                      Security Password *
+                    </label>
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11px', cursor: 'pointer', padding: 0, fontWeight: 600 }}
                       onClick={() => setForgotPasswordOpen(true)}
                     >
-                      Default: sensei / koms2026
+                      Forgot password?
                     </button>
                   </div>
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter password"
+                      placeholder="Enter your password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      style={{ width: '100%', paddingRight: '40px' }}
+                      style={{ width: '100%', height: '44px', padding: '0 42px 0 14px', borderRadius: '10px', background: '#070b13', border: '1px solid #334155', color: '#ffffff', fontSize: '13.5px' }}
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                      style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
@@ -2384,45 +2643,63 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                   </div>
                 </div>
 
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', color: '#94a3b8' }}>
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      style={{ accentColor: '#ef4444' }}
+                    />
+                    Remember my login
+                  </label>
+                </div>
+
                 <button
                   type="submit"
+                  disabled={loginSubmitting}
                   className="koms-btn koms-btn--primary"
-                  style={{ width: '100%', height: '46px', marginTop: '6px', fontWeight: 800, fontSize: '14px', background: '#ef4444' }}
+                  style={{ width: '100%', height: '46px', marginTop: '6px', fontWeight: 800, fontSize: '14px', background: '#ef4444', borderRadius: '10px', boxShadow: '0 4px 18px rgba(239, 68, 68, 0.4)', opacity: loginSubmitting ? 0.7 : 1 }}
                 >
-                  <Icon name="shield" size={16} />
-                  Authorize & Open GM Controls
+                  {loginSubmitting ? 'Authenticating…' : `Enter ${selectedPortal.toUpperCase()} Portal →`}
                 </button>
               </form>
 
-              {/* Student Portal Lookup Option */}
-              <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', textAlign: 'center' }}>
-                  Are you a student? Look up your attendance & belt progress:
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <div
-                    className="role-chip"
-                    style={{ background: '#0a0d16', borderColor: 'rgba(255, 255, 255, 0.1)', cursor: 'pointer' }}
-                    onClick={() => quickLoginRole('student', 'KOMS-2026-001')}
+              {/* Registration Options Footer */}
+              <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#94a3b8' }}>Need an account?</span>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.12)', color: '#ffffff', padding: '8px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    onClick={() => navigateTo('join-us')}
                   >
-                    <div>
-                      <strong style={{ color: '#ffffff' }}>🥋 Student Attendance Record</strong>
-                      <small style={{ color: '#94a3b8' }}> · M.P. Niranjana Sri (Yellow Belt)</small>
-                    </div>
-                    <span style={{ color: '#ef4444', fontWeight: 800, marginLeft: '12px' }}>Lookup →</span>
-                  </div>
+                    🎓 Register as Student
+                  </button>
+                  <button
+                    type="button"
+                    style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', padding: '8px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    onClick={() => {
+                      setDojoRegSubmitted(null)
+                      setNewDojoModalOpen(true)
+                    }}
+                  >
+                    🥋 Register as Master
+                  </button>
                 </div>
               </div>
 
-              <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
-                New student not registered yet?{' '}
-                <button
-                  style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-                  onClick={() => navigateTo('join-us')}
-                >
-                  Submit Dojo Admission Enquiry
-                </button>
-              </div>
+              {/* Quick Credentials Reference */}
+              <details style={{ marginTop: '16px', background: 'rgba(15, 23, 42, 0.5)', borderRadius: '10px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.05)', fontSize: '11px', color: '#64748b' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#94a3b8' }}>
+                  🔑 Quick Test Account Reference
+                </summary>
+                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', fontFamily: 'monospace' }}>
+                  <div>👑 Grand Master: <strong>grandmaster@koms.in</strong> / <strong>grandmaster123</strong></div>
+                  <div>🥋 Dojo Master: <strong>rubeshwaren@koms.in</strong> / <strong>masterpass123</strong></div>
+                  <div>🎓 Student: <strong>arjun@test.com</strong> / <strong>studentpass123</strong></div>
+                </div>
+              </details>
             </div>
           </section>
         )}
@@ -3228,6 +3505,28 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                         type="text"
                         value={regTimings}
                         onChange={(e) => setRegTimings(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Set Master Portal Password *</label>
+                      <input
+                        type="password"
+                        placeholder="At least 6 characters"
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Confirm Password *</label>
+                      <input
+                        type="password"
+                        placeholder="Re-enter password"
+                        value={regConfirmPassword}
+                        onChange={(e) => setRegConfirmPassword(e.target.value)}
+                        required
                       />
                     </div>
                   </div>

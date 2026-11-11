@@ -14,6 +14,9 @@ import dashboardRoutes from './routes/dashboard.js';
 import masterRoutes from './routes/master.js';
 import feeRoutes from './routes/fees.js';
 import announcementRoutes from './routes/announcements.js';
+import dojosRoutes from './routes/dojos.js';
+import grandmasterRoutes from './routes/grandmaster.js';
+import studentPortalRoutes from './routes/studentPortal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +43,9 @@ export function createApp() {
   app.use('/api/reports', reportsRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/master', masterRoutes);
+  app.use('/api/dojos', dojosRoutes);
+  app.use('/api/grandmaster', grandmasterRoutes);
+  app.use('/api/student', studentPortalRoutes);
 
   // Serve static assets if client is built
   const distPath = path.join(__dirname, '..', 'dist');

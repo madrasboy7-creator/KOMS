@@ -1,7 +1,7 @@
 import { Component, lazy, Suspense, useEffect, useState, type ErrorInfo, type ReactNode } from 'react'
 import { GeneralHomeScreen } from './home/GeneralHomeScreen'
 import { komsStore } from './services/komsStore'
-import { KomsMobileApp, type ScreenId } from './mobile/KomsMobileApp'
+import { KomsMobileApp } from './mobile/KomsMobileApp'
 
 const AdminPanel = lazy(() => import('./admin/AdminPanel'))
 const StudentPanel = lazy(() => import('./student/StudentPanel'))
@@ -72,16 +72,31 @@ export default function App() {
   }, [])
 
   // ACCESS CONTROL:
-  // Master Control Panel is accessible by Grand Master, Dojo Masters, Admins, and authorized Seniors
+  // Role-based portal routing
   const isMasterOrAdmin =
     session.role === 'grandmaster' ||
     session.role === 'admin' ||
     session.role === 'master' ||
     session.role === 'senior'
   const isStudent = session.role === 'student'
+  const isAuthenticated = isMasterOrAdmin || isStudent
 
-  // Render Dedicated 18-Screen Mobile App on phones / mobile screens
-  if (isMobileMode) {
+  // PHASE 1: When user opens the app without active authenticated session,
+  // the first page is ALWAYS the Common UI across all devices/viewports!
+  if (!isAuthenticated) {
+    return (
+      <AppErrorBoundary>
+        <GeneralHomeScreen
+          onLoginSuccess={() => {
+            setSession(komsStore.getSession())
+          }}
+        />
+      </AppErrorBoundary>
+    )
+  }
+
+  // Once authenticated as Master/Admin: allow toggle between Mobile & Desktop layout
+  if (isMasterOrAdmin && isMobileMode) {
     return (
       <AppErrorBoundary>
         <KomsMobileApp
@@ -121,35 +136,36 @@ export default function App() {
     )
   }
 
-  // Desktop View
+  // Authenticated Portals (Desktop layout / Student Panel)
   return (
     <AppErrorBoundary>
-      {/* Floating button to switch to 18-Screen Mobile Mode */}
-      <button
-        type="button"
-        style={{
-          position: 'fixed',
-          bottom: '16px',
-          right: '16px',
-          zIndex: 9999,
-          background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
-          border: '1px solid #f87171',
-          color: '#ffffff',
-          borderRadius: '9999px',
-          padding: '10px 18px',
-          fontSize: '12px',
-          fontWeight: 800,
-          boxShadow: '0 8px 24px rgba(239, 68, 68, 0.5)',
-          cursor: 'pointer',
-          letterSpacing: '0.04em',
-        }}
-        onClick={() => {
-          localStorage.setItem('koms_view_mode', 'mobile')
-          setIsMobileMode(true)
-        }}
-      >
-        📱 18-Screen Mobile View
-      </button>
+      {isMasterOrAdmin && (
+        <button
+          type="button"
+          style={{
+            position: 'fixed',
+            bottom: '16px',
+            right: '16px',
+            zIndex: 9999,
+            background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
+            border: '1px solid #f87171',
+            color: '#ffffff',
+            borderRadius: '9999px',
+            padding: '10px 18px',
+            fontSize: '12px',
+            fontWeight: 800,
+            boxShadow: '0 8px 24px rgba(239, 68, 68, 0.5)',
+            cursor: 'pointer',
+            letterSpacing: '0.04em',
+          }}
+          onClick={() => {
+            localStorage.setItem('koms_view_mode', 'mobile')
+            setIsMobileMode(true)
+          }}
+        >
+          📱 Mobile View
+        </button>
+      )}
 
       <Suspense
         fallback={
@@ -168,7 +184,7 @@ export default function App() {
               setSession(komsStore.getSession())
             }}
           />
-        ) : isStudent ? (
+        ) : (
           <StudentPanel
             initialStudent={session.student}
             onSignOut={() => {
@@ -176,8 +192,6 @@ export default function App() {
               setSession(komsStore.getSession())
             }}
           />
-        ) : (
-          <GeneralHomeScreen onLoginSuccess={() => setSession(komsStore.getSession())} />
         )}
       </Suspense>
     </AppErrorBoundary>

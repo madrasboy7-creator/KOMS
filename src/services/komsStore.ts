@@ -1418,8 +1418,37 @@ class KomsStore {
     return { success: false, message: 'Incorrect Admin password. (Default is "sensei" or "koms2026")' }
   }
 
+  public loginAsUser(user: { id: number | string; name: string; email: string; role: UserRole; status: string; dojo_id?: string; member_id?: string }, token?: string) {
+    if (token) {
+      localStorage.setItem('koms_token', token)
+    }
+    this.session = {
+      role: user.role,
+      userName: user.name,
+      userEmail: user.email,
+      masterName: user.role === 'master' ? user.name : undefined,
+      assignedDojos: user.dojo_id ? [user.dojo_id] : ['dojo-ranganagar'],
+      student: user.role === 'student' ? {
+        id: user.member_id || `KOMS-STU-${user.id}`,
+        name: user.name,
+        dateOfBirth: '2005-01-01',
+        belt: 'White Belt (Beginner)',
+        status: (user.status as any) || 'active',
+        email: user.email,
+        phone: '',
+        joiningDate: new Date().toISOString().slice(0, 10),
+        monthlyFee: 800,
+        address: 'Chennai',
+        guardianName: '',
+        guardianPhone: ''
+      } : undefined
+    }
+    this.save()
+  }
+
   public logout() {
     this.session = { role: 'guest' }
+    localStorage.removeItem('koms_token')
     this.save()
   }
 
@@ -1838,6 +1867,14 @@ class KomsStore {
   public getPublicDojos(includeAll = false): PublicDojo[] {
     if (includeAll) return this.publicDojos
     return this.publicDojos.filter((d) => d.status !== 'INACTIVE')
+  }
+
+  public setPublicDojos(dojos: PublicDojo[]) {
+    this.publicDojos = dojos
+    try {
+      localStorage.setItem(STORAGE_KEYS.PUBLIC_DOJOS, JSON.stringify(dojos))
+    } catch (_) {}
+    this.notify()
   }
 
   public getPublicDojo(id: string): PublicDojo | undefined {

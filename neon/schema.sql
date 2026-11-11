@@ -237,3 +237,162 @@ CREATE INDEX IF NOT EXISTS idx_announcements_master ON announcements(master_id, 
 CREATE INDEX IF NOT EXISTS idx_announcement_reads_announcement ON announcement_reads(announcement_id);
 CREATE INDEX IF NOT EXISTS idx_announcement_reads_student ON announcement_reads(student_id);
 
+-- =============================================================================
+-- 14. CENTRALIZED AUTHENTICATION & MULTI-ROLE PORTAL TABLES
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('student', 'master', 'grandmaster')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('pending', 'pending_approval', 'active', 'suspended', 'rejected')),
+    member_id TEXT UNIQUE,
+    phone TEXT,
+    avatar TEXT,
+    dojo_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS dojos (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    badge TEXT DEFAULT '龍神',
+    master_id BIGINT,
+    head_instructor TEXT,
+    instructor_rank TEXT,
+    instructor_experience TEXT,
+    instructor_avatar TEXT,
+    instructor_bio TEXT,
+    instructor_qualifications TEXT,
+    instructor_achievements TEXT,
+    area TEXT,
+    city TEXT DEFAULT 'Chennai',
+    state TEXT DEFAULT 'Tamil Nadu',
+    country TEXT DEFAULT 'India',
+    pincode TEXT,
+    address TEXT,
+    landmarks TEXT,
+    phone TEXT,
+    email TEXT,
+    training_days TEXT,
+    class_timings TEXT,
+    levels_offered TEXT,
+    entry_fee INTEGER DEFAULT 1000,
+    monthly_fee INTEGER DEFAULT 800,
+    facilities TEXT,
+    description TEXT,
+    banner_url TEXT,
+    logo_url TEXT,
+    gallery TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'pending_approval', 'suspended', 'inactive')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS master_applications (
+    id TEXT PRIMARY KEY,
+    user_id BIGINT,
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    dob TEXT,
+    gender TEXT,
+    style TEXT,
+    dan_rank TEXT,
+    experience TEXT,
+    qualifications TEXT,
+    teaching_experience TEXT,
+    achievements TEXT,
+    about_master TEXT,
+    dojo_name TEXT NOT NULL,
+    dojo_address TEXT,
+    dojo_city TEXT,
+    dojo_state TEXT,
+    dojo_pincode TEXT,
+    dojo_phone TEXT,
+    dojo_email TEXT,
+    training_styles TEXT,
+    initial_schedule TEXT,
+    status TEXT NOT NULL DEFAULT 'pending_approval' CHECK(status IN ('pending_approval', 'approved', 'rejected')),
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed_by BIGINT,
+    reviewer_notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS join_requests (
+    id TEXT PRIMARY KEY,
+    student_user_id BIGINT,
+    student_name TEXT NOT NULL,
+    dojo_id TEXT,
+    dojo_name TEXT NOT NULL,
+    dob TEXT,
+    age TEXT,
+    gender TEXT,
+    blood_group TEXT,
+    guardian_name TEXT,
+    guardian_phone TEXT,
+    guardian_whatsapp TEXT,
+    email TEXT,
+    phone TEXT,
+    address TEXT,
+    training_category TEXT,
+    prior_experience TEXT,
+    status TEXT NOT NULL DEFAULT 'pending_review' CHECK(status IN ('pending_review', 'approved', 'rejected')),
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed_by BIGINT,
+    reviewer_notes TEXT,
+    assigned_belt TEXT,
+    assigned_monthly_fee INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS student_profiles (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id BIGINT UNIQUE,
+    student_code TEXT UNIQUE NOT NULL,
+    dojo_id TEXT,
+    master_id BIGINT,
+    name TEXT NOT NULL,
+    dob TEXT,
+    gender TEXT,
+    blood_group TEXT,
+    guardian_name TEXT,
+    guardian_phone TEXT,
+    guardian_whatsapp TEXT,
+    phone TEXT,
+    email TEXT,
+    address TEXT,
+    belt TEXT DEFAULT 'White Belt (Beginner)',
+    training_category TEXT,
+    prior_experience TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'pending', 'suspended', 'inactive')),
+    monthly_fee INTEGER DEFAULT 800,
+    joining_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    avatar TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id TEXT PRIMARY KEY,
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    user_id TEXT,
+    user_name TEXT,
+    user_role TEXT,
+    dojo_id TEXT,
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id TEXT,
+    details TEXT,
+    reason TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role, status);
+CREATE INDEX IF NOT EXISTS idx_dojos_status ON dojos(status);
+CREATE INDEX IF NOT EXISTS idx_join_requests_dojo ON join_requests(dojo_id, status);
+CREATE INDEX IF NOT EXISTS idx_master_apps_status ON master_applications(status);
+
+

@@ -29,15 +29,15 @@ export const TabDashboard: React.FC<TabDashboardProps> = ({
 
   // Real backend metrics
   const [metrics, setMetrics] = useState({
-    total_active_students: 19,
-    new_registrations: 2,
-    today_scheduled_classes_count: 1,
-    today_present_students: 2,
+    total_active_students: 0,
+    new_registrations: 0,
+    today_scheduled_classes_count: 0,
+    today_present_students: 0,
     today_absent_students: 0,
-    current_month_expected_fees: 19000,
-    current_month_collected_revenue: 7000,
-    current_month_outstanding_fees: 12000,
-    monthly_attendance_percentage: 88.6,
+    current_month_expected_fees: 0,
+    current_month_collected_revenue: 0,
+    current_month_outstanding_fees: 0,
+    monthly_attendance_percentage: 0,
     recent_activities: [] as any[],
     upcoming_classes: [] as any[],
     recent_announcements: [] as any[],
@@ -48,23 +48,27 @@ export const TabDashboard: React.FC<TabDashboardProps> = ({
     async function loadStats() {
       try {
         setLoading(true)
+        const token = localStorage.getItem('koms_token')
         const masterId = localStorage.getItem('koms_master_id') || '1'
         const res = await fetch(`/api/dashboard/stats?month=${filterMonth}&date=${filterDate}`, {
-          headers: { 'x-master-id': masterId },
+          headers: {
+            'x-master-id': masterId,
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
         })
         if (res.ok) {
           const data = await res.json()
           if (isMounted) {
             setMetrics({
-              total_active_students: data.total_active_students ?? 19,
-              new_registrations: data.new_registrations ?? 2,
-              today_scheduled_classes_count: data.today_scheduled_classes_count ?? 1,
-              today_present_students: data.today_present_students ?? 2,
+              total_active_students: data.total_active_students ?? 0,
+              new_registrations: data.new_registrations ?? 0,
+              today_scheduled_classes_count: data.today_scheduled_classes_count ?? 0,
+              today_present_students: data.today_present_students ?? 0,
               today_absent_students: data.today_absent_students ?? 0,
-              current_month_expected_fees: data.current_month_expected_fees ?? 19000,
-              current_month_collected_revenue: data.current_month_collected_revenue ?? 7000,
-              current_month_outstanding_fees: data.current_month_outstanding_fees ?? 12000,
-              monthly_attendance_percentage: data.monthly_attendance_percentage ?? 88.6,
+              current_month_expected_fees: data.current_month_expected_fees ?? 0,
+              current_month_collected_revenue: data.current_month_collected_revenue ?? 0,
+              current_month_outstanding_fees: data.current_month_outstanding_fees ?? 0,
+              monthly_attendance_percentage: data.monthly_attendance_percentage ?? 0,
               recent_activities: data.recent_activities || [],
               upcoming_classes: data.upcoming_classes || [],
               recent_announcements: data.recent_announcements || [],

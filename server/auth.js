@@ -19,7 +19,25 @@ export function signToken(master) {
       id: master.id,
       name: master.name,
       email: master.email,
-      dojo_name: master.dojo_name
+      role: master.role || 'master',
+      dojo_name: master.dojo_name,
+      dojo_id: master.dojo_id || 'dojo-ranganagar'
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+}
+
+export function signUserToken(user) {
+  return jwt.sign(
+    {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      dojo_id: user.dojo_id,
+      member_id: user.member_id
     },
     JWT_SECRET,
     { expiresIn: '7d' }
@@ -40,35 +58,64 @@ export function authMiddleware(req, res, next) {
         req.master = master;
         req.dataMasterId = getEffectiveMasterId(master);
         req.master.data_id = req.dataMasterId;
+        req.user = { id: master.id, name: master.name, email: master.email, role: 'master', dojo_id: 'dojo-ranganagar' };
         return next();
       }
     }
 
     if (!token) {
-      // Default to Master 1 if no auth provided in development mode, but allow explicit verification
-      const devMaster = db.prepare('SELECT id, name, email, dojo_name FROM masters WHERE id = 1').get();
-      if (devMaster && process.env.NODE_ENV !== 'production' && !req.headers['x-strict-auth']) {
-        req.master = devMaster;
-        req.dataMasterId = getEffectiveMasterId(devMaster);
-        req.master.data_id = req.dataMasterId;
-        return next();
+      // Default dev fallback if enabled and strict auth not requested
+      if (process.env.NODE_ENV !== 'production' && !req.headers['x-strict-auth']) {
+        const devMaster = db.prepare('SELECT id, name, email, dojo_name FROM masters WHERE id = 1').get();
+        if (devMaster) {
+          req.master = devMaster;
+          req.dataMasterId = getEffectiveMasterId(devMaster);
+          req.master.data_id = req.dataMasterId;
+          req.user = { id: devMaster.id, name: devMaster.name, email: devMaster.email, role: 'master', dojo_id: 'dojo-ranganagar' };
+          return next();
+        }
       }
       return res.status(401).json({ error: 'Authentication required. Please provide a valid Bearer token.' });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    const master = db.prepare('SELECT id, name, email, dojo_name FROM masters WHERE id = ?').get(decoded.id);
-
-    if (!master) {
-      return res.status(401).json({ error: 'Master account not found.' });
+    
+    // Check in unified `users` table first
+    let user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+    if (user) {
+      req.user = user;
+      if (user.role === 'master' || user.role === 'grandmaster') {
+        const master = db.prepare('SELECT * FROM masters WHERE email = ?').get(user.email);
+        req.master = master || { id: user.id, name: user.name, email: user.email, dojo_name: user.dojo_id };
+        req.dataMasterId = getEffectiveMasterId(req.master);
+        req.master.data_id = req.dataMasterId;
+      }
+      return next();
     }
 
-    req.master = master;
-    req.dataMasterId = getEffectiveMasterId(master);
-    req.master.data_id = req.dataMasterId;
-    next();
+    // Fallback to legacy `masters` table
+    const master = db.prepare('SELECT id, name, email, dojo_name FROM masters WHERE id = ?').get(decoded.id);
+    if (master) {
+      req.master = master;
+      req.dataMasterId = getEffectiveMasterId(master);
+      req.master.data_id = req.dataMasterId;
+      req.user = { id: master.id, name: master.name, email: master.email, role: 'master', dojo_id: 'dojo-ranganagar' };
+      return next();
+    }
+
+    return res.status(401).json({ error: 'User account not found.' });
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token.', details: err.message });
   }
 }
+
+export function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ error: `Access denied. Requires one of roles: ${roles.join(', ')}` });
+    }
+    next();
+  };
+}
+
 

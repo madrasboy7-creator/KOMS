@@ -1,7 +1,6 @@
 /**
- * Future shared API configuration for both KOMS panels.
- * Set VITE_KOMS_API_BASE_URL only to the HTTPS backend API—not directly to
- * Neon. Database credentials must remain server-side.
+ * Shared API client for KOMS frontend.
+ * Automatically proxies through Vite in development or same-origin in production.
  */
 export const API_BASE_URL = import.meta.env.VITE_KOMS_API_BASE_URL ?? ''
 
@@ -15,13 +14,23 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!API_BASE_URL) throw new ApiError('KOMS API is not configured.', 503)
+  const url = `${API_BASE_URL}${path}`
+  const token = localStorage.getItem('koms_token')
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...((init?.headers as Record<string, string>) || {})
+  }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(url, {
     ...init,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers,
   })
-  if (!response.ok) throw new ApiError('The request could not be completed.', response.status)
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({ error: response.statusText }))
+    throw new ApiError(errBody.error || 'The request could not be completed.', response.status)
+  }
+
   return response.json() as Promise<T>
 }
