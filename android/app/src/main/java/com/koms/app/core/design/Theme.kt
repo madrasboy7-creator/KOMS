@@ -34,3 +34,4 @@ fun KomsTheme(content: @Composable () -> Unit) {
         content = content
     )
 }
+

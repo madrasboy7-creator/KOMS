@@ -378,3 +378,4 @@ class KomsLocalDb(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, n
         db.delete("pending_sync", "id = ?", arrayOf(id))
     }
 }
+

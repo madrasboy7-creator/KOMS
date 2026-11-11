@@ -54,42 +54,67 @@ class KomsApiClient(private val context: Context) {
     }
 
     suspend fun login(email: String, password: String, portalPreference: String): Result<User> = withContext(Dispatchers.IO) {
+        val payload = mapOf(
+            "email" to email,
+            "password" to password,
+            "portalPreference" to portalPreference
+        )
+        val reqBody = gson.toJson(payload).toRequestBody(jsonMediaType)
+        
+        var respBody: String? = null
+        var isSuccess = false
+        var statusCode = 0
+
+        // 1. Try configured Base URL
         try {
-            val payload = mapOf(
-                "email" to email,
-                "password" to password,
-                "portalPreference" to portalPreference
-            )
-            val reqBody = gson.toJson(payload).toRequestBody(jsonMediaType)
             val req = Request.Builder().url("${baseUrl()}/api/auth/login").post(reqBody).build()
             client.newCall(req).execute().use { resp ->
-                val body = resp.body?.string() ?: ""
-                if (resp.isSuccessful) {
-                    val mapType = object : TypeToken<Map<String, Any>>() {}.type
-                    val map: Map<String, Any> = gson.fromJson(body, mapType)
-                    val token = map["token"] as? String ?: ""
-                    val userMap = map["user"] as? Map<*, *> ?: emptyMap<Any, Any>()
-
-                    val user = User(
-                        id = userMap["id"]?.toString() ?: "",
-                        name = userMap["name"]?.toString() ?: "",
-                        email = userMap["email"]?.toString() ?: "",
-                        role = userMap["role"]?.toString() ?: "",
-                        status = userMap["status"]?.toString() ?: "active",
-                        memberId = userMap["member_id"]?.toString() ?: "",
-                        dojoId = userMap["dojo_id"]?.toString(),
-                        token = token
-                    )
-                    sessionManager.saveSession(token, user)
-                    Result.success(user)
-                } else {
-                    val errMap = try { gson.fromJson(body, Map::class.java) } catch (_: Exception) { null }
-                    val errMsg = errMap?.get("error")?.toString() ?: "Login failed (code ${resp.code})"
-                    Result.failure(Exception(errMsg))
-                }
+                statusCode = resp.code
+                isSuccess = resp.isSuccessful
+                respBody = resp.body?.string()
             }
-        } catch (e: Exception) {
-            Result.failure(Exception("Cannot connect to server (${e.message}). Check internet connection."))
+        } catch (_: Exception) {
+            // 2. Try localhost fallback if USB reverse is active
+            try {
+                val reqLocal = Request.Builder().url("http://localhost:5000/api/auth/login").post(reqBody).build()
+                client.newCall(reqLocal).execute().use { resp ->
+                    statusCode = resp.code
+                    isSuccess = resp.isSuccessful
+                    respBody = resp.body?.string()
+                    if (isSuccess) {
+                        sessionManager.setServerUrl("http://localhost:5000")
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        if (respBody != null) {
+            val body = respBody!!
+            if (isSuccess) {
+                val mapType = object : TypeToken<Map<String, Any>>() {}.type
+                val map: Map<String, Any> = gson.fromJson(body, mapType)
+                val token = map["token"] as? String ?: ""
+                val userMap = map["user"] as? Map<*, *> ?: emptyMap<Any, Any>()
+
+                val user = User(
+                    id = userMap["id"]?.toString() ?: "",
+                    name = userMap["name"]?.toString() ?: "",
+                    email = userMap["email"]?.toString() ?: "",
+                    role = userMap["role"]?.toString() ?: "",
+                    status = userMap["status"]?.toString() ?: "active",
+                    memberId = userMap["member_id"]?.toString() ?: "",
+                    dojoId = userMap["dojo_id"]?.toString(),
+                    token = token
+                )
+                sessionManager.saveSession(token, user)
+                Result.success(user)
+            } else {
+                val errMap = try { gson.fromJson(body, Map::class.java) } catch (_: Exception) { null }
+                val errMsg = errMap?.get("error")?.toString() ?: "Login failed (code $statusCode)"
+                Result.failure(Exception(errMsg))
+            }
+        } else {
+            Result.failure(Exception("Cannot connect to server. Please check internet connection."))
         }
     }
 
@@ -133,31 +158,58 @@ class KomsApiClient(private val context: Context) {
 
     suspend fun getPublicDojos(): Result<List<Dojo>> = withContext(Dispatchers.IO) {
         try {
-            val req = Request.Builder().url("${baseUrl()}/api/dojos/public").get().build()
-            client.newCall(req).execute().use { resp ->
-                if (resp.isSuccessful) {
-                    val body = resp.body?.string() ?: ""
-                    val listType = object : TypeToken<List<Map<String, Any>>>() {}.type
-                    val list: List<Map<String, Any>> = gson.fromJson(body, listType)
-                    val dojos = list.map { m ->
-                        Dojo(
-                            id = m["id"]?.toString() ?: "",
-                            name = m["name"]?.toString() ?: "",
-                            badge = m["badge"]?.toString() ?: "Verified Center",
-                            masterName = m["masterName"]?.toString() ?: m["head_instructor"]?.toString() ?: "",
-                            masterRank = m["masterRank"]?.toString() ?: m["instructor_rank"]?.toString() ?: "Master",
-                            address = m["address"]?.toString() ?: "",
-                            city = m["city"]?.toString() ?: "Chennai",
-                            schedule = m["schedule"]?.toString() ?: m["training_days"]?.toString() ?: "",
-                            style = m["style"]?.toString() ?: "Okinawa Shorin Ryu",
-                            monthlyFee = (m["monthlyFee"] as? Number)?.toInt() ?: 1200,
-                            bannerUrl = m["bannerUrl"]?.toString() ?: ""
-                        )
+            val primaryUrl = "${baseUrl()}/api/dojos/public"
+            val fallbackUrl = "http://localhost:5000/api/dojos/public"
+            
+            var body: String? = null
+            try {
+                val req = Request.Builder().url(primaryUrl).get().build()
+                client.newCall(req).execute().use { resp ->
+                    if (resp.isSuccessful) {
+                        body = resp.body?.string()
                     }
-                    Result.success(dojos)
-                } else {
-                    Result.failure(Exception("Failed to fetch dojos"))
                 }
+            } catch (_: Exception) {
+                // Try localhost fallback if connected via adb reverse
+                try {
+                    val reqFallback = Request.Builder().url(fallbackUrl).get().build()
+                    client.newCall(reqFallback).execute().use { resp ->
+                        if (resp.isSuccessful) {
+                            body = resp.body?.string()
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+
+            if (body != null && body!!.isNotBlank()) {
+                val raw = body!!
+                val list: List<Map<String, Any>> = if (raw.trimStart().startsWith("{")) {
+                    val obj = gson.fromJson(raw, Map::class.java)
+                    @Suppress("UNCHECKED_CAST")
+                    (obj["dojos"] as? List<Map<String, Any>>) ?: emptyList()
+                } else {
+                    val listType = object : TypeToken<List<Map<String, Any>>>() {}.type
+                    gson.fromJson(raw, listType)
+                }
+
+                val dojos = list.map { m ->
+                    Dojo(
+                        id = m["id"]?.toString() ?: "",
+                        name = m["name"]?.toString() ?: "",
+                        badge = m["badge"]?.toString() ?: "Official Branch",
+                        masterName = m["headInstructor"]?.toString() ?: m["masterName"]?.toString() ?: m["head_instructor"]?.toString() ?: "Sensei Master",
+                        masterRank = m["instructorRank"]?.toString() ?: m["masterRank"]?.toString() ?: m["instructor_rank"]?.toString() ?: "Black Belt",
+                        address = m["address"]?.toString() ?: "",
+                        city = m["city"]?.toString() ?: "Chennai",
+                        schedule = m["trainingDays"]?.toString() ?: m["schedule"]?.toString() ?: "Sat, Sun Batches",
+                        style = m["style"]?.toString() ?: "Okinawa Shorin Ryu",
+                        monthlyFee = (m["monthlyFee"] as? Number)?.toInt() ?: (m["monthly_fee"] as? Number)?.toInt() ?: 800,
+                        bannerUrl = m["bannerUrl"]?.toString() ?: ""
+                    )
+                }
+                Result.success(dojos)
+            } else {
+                Result.failure(Exception("Unable to load dojos directory"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -286,4 +338,96 @@ class KomsApiClient(private val context: Context) {
             Result.failure(e)
         }
     }
+
+    suspend fun getMasterProfile(): Result<Map<String, Any>> = withContext(Dispatchers.IO) {
+        try {
+            val req = Request.Builder().url("${baseUrl()}/api/master/profile").get().build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string() ?: ""
+                    val mapType = object : TypeToken<Map<String, Any>>() {}.type
+                    Result.success(gson.fromJson(body, mapType))
+                } else {
+                    Result.failure(Exception("Failed to fetch master profile"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateMasterProfile(data: Map<String, Any>): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val reqBody = gson.toJson(data).toRequestBody(jsonMediaType)
+            val req = Request.Builder().url("${baseUrl()}/api/master/profile").put(reqBody).build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    Result.success("Master profile updated and synchronized live to Common UI!")
+                } else {
+                    Result.failure(Exception("Failed to update master profile"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getDojoProfile(): Result<Map<String, Any>> = withContext(Dispatchers.IO) {
+        try {
+            val req = Request.Builder().url("${baseUrl()}/api/master/dojo-profile").get().build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string() ?: ""
+                    val mapType = object : TypeToken<Map<String, Any>>() {}.type
+                    Result.success(gson.fromJson(body, mapType))
+                } else {
+                    Result.failure(Exception("Failed to fetch dojo profile"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateDojoProfile(data: Map<String, Any>): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val reqBody = gson.toJson(data).toRequestBody(jsonMediaType)
+            val req = Request.Builder().url("${baseUrl()}/api/master/dojo-profile").put(reqBody).build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    Result.success("Dojo profile updated and live synced to Common UI!")
+                } else {
+                    Result.failure(Exception("Failed to update dojo profile"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun recordFeePayment(studentId: String, amount: Double, month: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val payload = mapOf("student_id" to studentId, "amount" to amount, "month" to month)
+            val reqBody = gson.toJson(payload).toRequestBody(jsonMediaType)
+            val req = Request.Builder().url("${baseUrl()}/api/fees/record").post(reqBody).build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) Result.success("Fee recorded successfully!") else Result.failure(Exception("Failed to record fee"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun registerStudentDirect(data: Map<String, Any>): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val reqBody = gson.toJson(data).toRequestBody(jsonMediaType)
+            val req = Request.Builder().url("${baseUrl()}/api/master/students").post(reqBody).build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) Result.success("Student registered directly!") else Result.failure(Exception("Failed to register student"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
+

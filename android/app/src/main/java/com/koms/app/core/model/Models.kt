@@ -96,3 +96,4 @@ data class AppVersionInfo(
     val downloadUrl: String = "",
     val releaseNotes: List<String> = emptyList()
 )
+

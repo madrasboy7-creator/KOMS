@@ -14,8 +14,8 @@ function parseJsonArray(str, fallback = []) {
   }
 }
 
-// GET /api/dojos/public — Publicly listed approved Dojos for Common UI
-router.get('/public', (req, res) => {
+// GET /api/dojos/public and /api/dojos — Publicly listed approved Dojos for Common UI
+const getPublicDojosHandler = (req, res) => {
   try {
     const dojos = db.prepare(`
       SELECT * FROM dojos 
@@ -70,7 +70,10 @@ router.get('/public', (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch public dojos: ' + err.message });
   }
-});
+};
+
+router.get('/public', getPublicDojosHandler);
+router.get('/', getPublicDojosHandler);
 
 // GET /api/dojos/:id — Single Dojo details
 router.get('/:id', (req, res) => {
