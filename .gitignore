@@ -39,3 +39,11 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 
+# Android build outputs & Gradle cache
+android/.gradle/
+android/build/
+android/app/build/
+android/.kotlin/
+android/local.properties
+
+

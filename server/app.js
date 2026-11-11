@@ -32,6 +32,22 @@ export function createApp() {
     res.json({ status: 'ok', service: 'KOMS Dojo Attendance System', timestamp: new Date().toISOString() });
   });
 
+  // App version check for Native Android auto-updates
+  app.get('/api/app-version', (req, res) => {
+    res.json({
+      latestVersion: '1.0.0',
+      versionCode: 1,
+      minimumSupportedVersion: 1,
+      updateAvailable: false,
+      downloadUrl: 'https://koms-backend.onrender.com/releases/koms-release.apk',
+      releaseNotes: [
+        'Native Android Jetpack Compose transformation',
+        'Offline local database caching & auto-sync',
+        'Native Student, Master, and Grand Master portals'
+      ]
+    });
+  });
+
   // API Routes
   app.use('/api/auth', authRoutes);
   app.use('/api/schedule', scheduleRoutes);
