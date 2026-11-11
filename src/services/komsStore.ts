@@ -1,3 +1,5 @@
+import { approvedDojos, type PublicDojo } from '../home/commonData'
+import { initialMasterProfile, type MasterProfileData } from '../admin/masterData'
 import { devAnnouncements, devDojo, devEvents, devFees, devSchedule, devStudents } from '../data/devSampleData'
 import type {
   Announcement,
@@ -139,6 +141,8 @@ const STORAGE_KEYS = {
   FEE_LEDGER: 'koms_fee_ledger_v1',
   SYSTEM_AUDIT_LOGS: 'koms_system_audit_logs_v1',
   STUDENT_REG_REQUESTS: 'koms_student_reg_requests_v1',
+  MASTER_PROFILE: 'koms_master_profile_v3',
+  PUBLIC_DOJOS: 'koms_public_dojos_v3',
 }
 
 export const initialRegisteredDojos: RegisteredDojo[] = [
@@ -439,6 +443,26 @@ const initialRegistrations: RegistrationEnquiry[] = [
     submittedAt: '24 Oct 2026',
     status: 'pending_review',
   },
+  {
+    id: 'KOMS-REQ-2026-1102',
+    studentName: 'R. Vigneshwar',
+    dateOfBirth: '18/11/2012',
+    age: '14 years',
+    gender: 'Male',
+    bloodGroup: 'A+ve',
+    fatherName: 'M. Radhakrishnan',
+    motherName: 'R. Jayanthi',
+    guardianPhone: '9841098765',
+    guardianWhatsapp: '9841098765',
+    email: 'radhakrishnan.m@gmail.com',
+    address: 'Plot 45, Ranga Nagar Main Road, Mudichur, Chennai - 600048',
+    dojoId: 'dojo-ranganagar',
+    dojoName: 'MASS DRAGON DOJO — Ranga Nagar Dojo',
+    trainingCategory: 'Youth Karate & Kobudo Martial Arts',
+    priorExperience: '1 year Shotokan basics in school',
+    submittedAt: '26 Oct 2026',
+    status: 'pending_review',
+  },
 ]
 
 const defaultCmsData: GrandMasterCmsData = {
@@ -482,6 +506,8 @@ class KomsStore {
   private feeLedger: StudentFeeLedgerItem[] = []
   private systemAuditLogs: SystemAuditLog[] = []
   private studentRegRequests: StudentRegistrationRequest[] = []
+  private masterProfile: MasterProfileData = initialMasterProfile
+  private publicDojos: PublicDojo[] = approvedDojos
   private listeners: Set<() => void> = new Set()
 
   constructor() {
@@ -628,6 +654,12 @@ class KomsStore {
 
       const storedRegReqs = localStorage.getItem(STORAGE_KEYS.STUDENT_REG_REQUESTS)
       this.studentRegRequests = storedRegReqs ? JSON.parse(storedRegReqs) : []
+
+      const storedMasterProfile = localStorage.getItem(STORAGE_KEYS.MASTER_PROFILE)
+      this.masterProfile = storedMasterProfile ? JSON.parse(storedMasterProfile) : initialMasterProfile
+
+      const storedPublicDojos = localStorage.getItem(STORAGE_KEYS.PUBLIC_DOJOS)
+      this.publicDojos = storedPublicDojos ? JSON.parse(storedPublicDojos) : approvedDojos
     } catch {
       this.students = devStudents
       this.schedule = devSchedule
@@ -650,6 +682,8 @@ class KomsStore {
       this.feeLedger = []
       this.systemAuditLogs = []
       this.studentRegRequests = []
+      this.masterProfile = initialMasterProfile
+      this.publicDojos = approvedDojos
     }
   }
 
@@ -678,6 +712,8 @@ class KomsStore {
       localStorage.setItem(STORAGE_KEYS.FEE_LEDGER, JSON.stringify(this.feeLedger))
       localStorage.setItem(STORAGE_KEYS.SYSTEM_AUDIT_LOGS, JSON.stringify(this.systemAuditLogs))
       localStorage.setItem(STORAGE_KEYS.STUDENT_REG_REQUESTS, JSON.stringify(this.studentRegRequests))
+      localStorage.setItem(STORAGE_KEYS.MASTER_PROFILE, JSON.stringify(this.masterProfile))
+      localStorage.setItem(STORAGE_KEYS.PUBLIC_DOJOS, JSON.stringify(this.publicDojos))
     } catch {
       // Ignore storage errors in restricted contexts
     }
@@ -1737,6 +1773,161 @@ class KomsStore {
     d.status = 'ACTIVE'
     delete d.suspensionReason
     this.logAudit('REACTIVATE_DOJO', 'DOJO', dojoId, `Grand Master reactivated dojo "${d.name}"`)
+    this.save()
+    return true
+  }
+
+  /* =========================================================================
+     MASTER PROFILE & COMMON UI DOJO SYNCHRONIZATION
+     ========================================================================= */
+  public getMasterProfile(): MasterProfileData {
+    return this.masterProfile
+  }
+
+  public updateMasterProfile(updates: Partial<MasterProfileData>): MasterProfileData {
+    this.masterProfile = {
+      ...this.masterProfile,
+      ...updates,
+    }
+
+    // Bidirectional Synchronization: Automatically update associated Dojo in Common UI directory!
+    const targetDojoId = updates.dojoId || this.masterProfile.dojoId || 'dojo-ranganagar'
+    const dojoIndex = this.publicDojos.findIndex(
+      (d) => d.id === targetDojoId || d.name.toLowerCase().includes('ranga nagar')
+    )
+
+    if (dojoIndex >= 0) {
+      const current = this.publicDojos[dojoIndex]
+      const updatedDojo: PublicDojo = {
+        ...current,
+        headInstructor: updates.name || current.headInstructor,
+        instructorRank: updates.danRank || updates.rank || current.instructorRank,
+        instructorExperience: updates.experience || current.instructorExperience,
+        instructorAvatar: updates.avatar || current.instructorAvatar,
+        instructorBio: updates.biography || current.instructorBio,
+        instructorQualifications: updates.qualifications || current.instructorQualifications,
+        instructorAchievements: updates.achievements || current.instructorAchievements,
+        phone: updates.phone || current.phone,
+        email: updates.email || current.email,
+      }
+      this.publicDojos[dojoIndex] = updatedDojo
+    }
+
+    // Also synchronize registered dojos list
+    const regIndex = this.registeredDojos.findIndex((d) => d.id === targetDojoId)
+    if (regIndex >= 0) {
+      this.registeredDojos[regIndex].masterName = updates.name || this.registeredDojos[regIndex].masterName
+      this.registeredDojos[regIndex].masterPhone = updates.phone || this.registeredDojos[regIndex].masterPhone
+      this.registeredDojos[regIndex].masterEmail = updates.email || this.registeredDojos[regIndex].masterEmail
+      if (updates.achievements) {
+        this.registeredDojos[regIndex].achievements = updates.achievements
+      }
+    }
+
+    this.logAudit(
+      'UPDATE_MASTER_PROFILE',
+      'PROFILE',
+      this.masterProfile.id || 'master-1',
+      `Master Profile updated for ${this.masterProfile.name}: Dan Rank ${this.masterProfile.danRank || this.masterProfile.rank}`
+    )
+
+    this.save()
+    return this.masterProfile
+  }
+
+  public getPublicDojos(includeAll = false): PublicDojo[] {
+    if (includeAll) return this.publicDojos
+    return this.publicDojos.filter((d) => d.status !== 'INACTIVE')
+  }
+
+  public getPublicDojo(id: string): PublicDojo | undefined {
+    return this.publicDojos.find((d) => d.id === id)
+  }
+
+  public updatePublicDojo(dojoId: string, updates: Partial<PublicDojo>): PublicDojo | null {
+    const idx = this.publicDojos.findIndex((d) => d.id === dojoId)
+    if (idx < 0) return null
+
+    this.publicDojos[idx] = {
+      ...this.publicDojos[idx],
+      ...updates,
+    }
+
+    // Also update registered dojos registry if matching
+    const regIdx = this.registeredDojos.findIndex((d) => d.id === dojoId)
+    if (regIdx >= 0) {
+      if (updates.name) this.registeredDojos[regIdx].name = updates.name
+      if (updates.address) this.registeredDojos[regIdx].address = updates.address
+      if (updates.area) this.registeredDojos[regIdx].area = updates.area
+      if (updates.phone) this.registeredDojos[regIdx].masterPhone = updates.phone
+      if (updates.monthlyFee) this.registeredDojos[regIdx].monthlyFee = updates.monthlyFee
+      if (updates.entryFee) this.registeredDojos[regIdx].entryFee = updates.entryFee
+      if (updates.trainingDays) this.registeredDojos[regIdx].weeklySchedule = updates.trainingDays
+      if (updates.status) this.registeredDojos[regIdx].status = updates.status
+    }
+
+    this.logAudit('UPDATE_DOJO_PROFILE', 'DOJO', dojoId, `Dojo profile updated: ${this.publicDojos[idx].name}`)
+    this.save()
+    return this.publicDojos[idx]
+  }
+
+  /* =========================================================================
+     JOIN REQUESTS (FROM COMMON UI -> MASTER PANEL)
+     ========================================================================= */
+  public getJoinRequests(dojoId?: string): RegistrationEnquiry[] {
+    if (!dojoId) return this.registrations
+    return this.registrations.filter((r) => r.dojoId === dojoId || !r.dojoId)
+  }
+
+  public submitJoinRequest(input: Omit<RegistrationEnquiry, 'id' | 'submittedAt' | 'status'>): RegistrationEnquiry {
+    return this.submitRegistrationEnquiry(input)
+  }
+
+  public approveJoinRequest(requestId: string, options?: { monthlyFee?: number; rank?: string }): Student | null {
+    const req = this.registrations.find((r) => r.id === requestId)
+    if (!req) return null
+
+    req.status = 'approved'
+
+    // Automatically create Student in Student Management
+    const studentCode = `KOMS-${new Date().getFullYear()}-${String(this.students.length + 1).padStart(3, '0')}`
+    const newStudent: Student = {
+      id: studentCode,
+      name: req.studentName,
+      belt: (options?.rank || 'White Belt (Beginner)') as any,
+      rank: options?.rank || 'White Belt (Beginner)',
+      dojoId: req.dojoId || 'dojo-ranganagar',
+      phone: req.guardianPhone || '',
+      email: req.email || '',
+      address: req.address || 'Chennai, Tamil Nadu',
+      joiningDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      status: 'active',
+      monthlyFee: options?.monthlyFee || 1000,
+      avatar: req.gender === 'Female' ? '/students/image7.jpeg' : '/students/image1.jpeg',
+      gender: (req.gender as any) || 'Not Specified',
+      age: req.age ? parseInt(req.age, 10) : 12,
+      guardianName: req.fatherName || req.motherName || 'Parent / Guardian',
+      guardianPhone: req.guardianPhone || '',
+      attendancePercentage: 100,
+    }
+
+    this.students.unshift(newStudent)
+    this.logAudit('APPROVE_JOIN_REQUEST', 'STUDENT', studentCode, `Master approved join request for ${req.studentName} (${studentCode})`)
+
+    this.save()
+    return newStudent
+  }
+
+  public rejectJoinRequest(requestId: string, reason?: string): boolean {
+    const req = this.registrations.find((r) => r.id === requestId)
+    if (!req) return false
+
+    req.status = 'rejected'
+    if (reason) {
+      req.reviewerNotes = reason
+    }
+
+    this.logAudit('REJECT_JOIN_REQUEST', 'STUDENT', requestId, `Master rejected join request for ${req.studentName}: ${reason || 'Capacity full'}`)
     this.save()
     return true
   }

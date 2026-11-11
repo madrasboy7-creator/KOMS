@@ -180,9 +180,9 @@ export const TabDashboard: React.FC<TabDashboardProps> = ({
           <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Ranga Nagar Dojo roster</div>
         </div>
 
-        {/* Metric 2: New Registrations */}
+        {/* Metric 2: New Registrations / Join Requests */}
         <div
-          onClick={() => onNavigate('Students', 'requests')}
+          onClick={() => onNavigate('JoinRequests')}
           style={{
             background: '#101625',
             border: '1px solid rgba(245, 158, 11, 0.25)',
@@ -192,11 +192,11 @@ export const TabDashboard: React.FC<TabDashboardProps> = ({
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>New Registrations</span>
+            <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>Join Requests</span>
             <span style={{ fontSize: '18px' }}>📝</span>
           </div>
           <div style={{ fontSize: '26px', fontWeight: 800, color: '#f59e0b' }}>{metrics.new_registrations}</div>
-          <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>Pending Master review</div>
+          <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>Pending review from Common UI</div>
         </div>
 
         {/* Metric 3: Today's Scheduled Classes */}
@@ -322,13 +322,6 @@ export const TabDashboard: React.FC<TabDashboardProps> = ({
         <button
           className="master-btn-primary"
           style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', padding: '10px 18px', fontSize: '13px' }}
-          onClick={() => onNavigate('Fees', 'collect')}
-        >
-          + Collect Fee
-        </button>
-        <button
-          className="master-btn-primary"
-          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 18px', fontSize: '13px' }}
           onClick={() => onNavigate('Attendance', 'daily-attendance')}
         >
           📋 Mark Attendance
@@ -343,16 +336,37 @@ export const TabDashboard: React.FC<TabDashboardProps> = ({
         <button
           className="master-btn-primary"
           style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 18px', fontSize: '13px' }}
-          onClick={() => onNavigate('Notes', 'create')}
+          onClick={() => onNavigate('Schedule', 'add-class')}
         >
-          📢 New Announcement
+          ⏱️ Create Class
         </button>
         <button
           className="master-btn-primary"
           style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 18px', fontSize: '13px' }}
-          onClick={() => onNavigate('Reports', 'overview')}
+          onClick={() => onNavigate('Fees', 'collect')}
         >
-          📊 Reports & Analytics
+          💳 Record Fee Payment
+        </button>
+        <button
+          className="master-btn-primary"
+          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 18px', fontSize: '13px' }}
+          onClick={() => onNavigate('JoinRequests')}
+        >
+          📥 View Join Requests
+        </button>
+        <button
+          className="master-btn-primary"
+          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 18px', fontSize: '13px' }}
+          onClick={() => onNavigate('DojoProfile')}
+        >
+          🏯 Edit Dojo Profile
+        </button>
+        <button
+          className="master-btn-primary"
+          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', padding: '10px 18px', fontSize: '13px' }}
+          onClick={() => onNavigate('MasterProfile')}
+        >
+          🥋 Edit Master Profile
         </button>
       </div>
 

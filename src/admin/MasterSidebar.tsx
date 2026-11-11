@@ -1,14 +1,18 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { assetConfig } from '../config/assets'
+import { komsStore } from '../services/komsStore'
 
 export type MasterTabId =
   | 'Dashboard'
-  | 'Students'
-  | 'Fees'
   | 'Attendance'
+  | 'Fees'
   | 'Schedule'
-  | 'Notes'
+  | 'Students'
+  | 'JoinRequests'
+  | 'DojoProfile'
+  | 'MasterProfile'
   | 'Reports'
+  | 'Notes'
   | 'Settings'
   | 'Dojos'
   | 'Seniors'
@@ -40,16 +44,30 @@ export const MasterSidebar: React.FC<MasterSidebarProps> = ({
   const isSenior = role === 'senior'
   const isGrandMaster = role === 'grandmaster'
 
+  const [pendingJoinCount, setPendingJoinCount] = useState<number>(0)
+
+  useEffect(() => {
+    function updateBadge() {
+      const reqs = komsStore.getJoinRequests()
+      const pending = reqs.filter((r) => r.status === 'pending_review' || (r.status as string) === 'Pending').length
+      setPendingJoinCount(pending)
+    }
+    updateBadge()
+    return komsStore.subscribe(updateBadge)
+  }, [])
+
   const allNavItems: {
     id: MasterTabId
     label: string
     icon: React.ReactNode
     roles: string[]
+    badge?: number
     submodules?: { id: string; label: string }[]
   }[] = [
+    // 1. Dashboard
     {
       id: 'Dashboard',
-      label: isGrandMaster ? 'Executive Dashboard' : 'Master Dashboard',
+      label: isGrandMaster ? 'Executive Dashboard' : 'Dashboard',
       roles: ['grandmaster', 'master', 'admin', 'senior'],
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -58,62 +76,19 @@ export const MasterSidebar: React.FC<MasterSidebarProps> = ({
         </svg>
       ),
     },
-    {
-      id: 'Students',
-      label: 'Student Management',
-      roles: ['grandmaster', 'master', 'admin', 'senior'],
-      submodules: [
-        { id: 'all', label: 'All Students' },
-        { id: 'add', label: 'Add Student' },
-        { id: 'requests', label: 'Registration Requests' },
-        { id: 'active', label: 'Active Students' },
-        { id: 'inactive', label: 'Inactive Students' },
-        { id: 'history', label: 'Student History' },
-        { id: 'belts', label: 'Belt Management' },
-      ],
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
-      ),
-    },
-    {
-      id: 'Fees',
-      label: 'Fee Management',
-      roles: ['grandmaster', 'master', 'admin'],
-      submodules: [
-        { id: 'dashboard', label: 'Fee Dashboard' },
-        { id: 'collect', label: 'Collect Fee' },
-        { id: 'paid', label: 'Paid Fees' },
-        { id: 'pending', label: 'Pending Fees' },
-        { id: 'partial', label: 'Partial Payments' },
-        { id: 'overdue', label: 'Overdue Fees' },
-        { id: 'waived', label: 'Waived Fees' },
-        { id: 'history', label: 'Month-wise History' },
-        { id: 'receipts', label: 'Payment Receipts' },
-        { id: 'reports', label: 'Fee Reports' },
-      ],
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect width="20" height="14" x="2" y="5" rx="2" />
-          <line x1="2" x2="22" y1="10" y2="10" />
-        </svg>
-      ),
-    },
+
+    // 2. Attendance Management
     {
       id: 'Attendance',
-      label: 'Attendance Tracking',
+      label: 'Attendance Management',
       roles: ['grandmaster', 'master', 'admin', 'senior'],
       submodules: [
         { id: 'dashboard', label: 'Attendance Dashboard' },
-        { id: 'daily-attendance', label: 'Daily Attendance' },
-        { id: 'weekly-schedule', label: 'Weekly Schedule' },
+        { id: 'daily-attendance', label: 'Mark Attendance' },
+        { id: 'weekly-schedule', label: 'Date-wise Attendance' },
         { id: 'monthly-calendar', label: 'Monthly Calendar' },
-        { id: 'attendance-history', label: 'Attendance History' },
-        { id: 'monthly-register', label: 'Monthly Matrix Sheet' },
+        { id: 'attendance-history', label: 'Student-wise Attendance' },
+        { id: 'monthly-register', label: 'Monthly Attendance Matrix' },
         { id: 'reports', label: 'Attendance Reports' },
       ],
       icon: (
@@ -126,15 +101,42 @@ export const MasterSidebar: React.FC<MasterSidebarProps> = ({
         </svg>
       ),
     },
+
+    // 3. Fee Management
+    {
+      id: 'Fees',
+      label: 'Fee Management',
+      roles: ['grandmaster', 'master', 'admin'],
+      submodules: [
+        { id: 'dashboard', label: 'Fee Dashboard' },
+        { id: 'collect', label: 'Record Payment' },
+        { id: 'paid', label: 'Paid Students' },
+        { id: 'pending', label: 'Pending Fees' },
+        { id: 'partial', label: 'Partial Payments' },
+        { id: 'overdue', label: 'Overdue Fees' },
+        { id: 'waived', label: 'Fee Adjustments' },
+        { id: 'history', label: 'Payment History' },
+        { id: 'receipts', label: 'Payment Receipts' },
+        { id: 'reports', label: 'Fee Reports' },
+      ],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect width="20" height="14" x="2" y="5" rx="2" />
+          <line x1="2" x2="22" y1="10" y2="10" />
+        </svg>
+      ),
+    },
+
+    // 4. Class Schedule
     {
       id: 'Schedule',
-      label: 'Class Scheduling',
+      label: 'Class Schedule',
       roles: ['grandmaster', 'master', 'admin', 'senior'],
       submodules: [
         { id: 'dashboard', label: 'Schedule Dashboard' },
         { id: 'weekly', label: 'Weekly Schedule' },
-        { id: 'calendar', label: 'Monthly Calendar' },
-        { id: 'add-class', label: 'Add New Class' },
+        { id: 'calendar', label: 'Monthly Class Calendar' },
+        { id: 'add-class', label: 'Create Schedule / Add Class' },
         { id: 'history', label: 'Class History' },
       ],
       icon: (
@@ -144,27 +146,75 @@ export const MasterSidebar: React.FC<MasterSidebarProps> = ({
         </svg>
       ),
     },
+
+    // 5. Student Management
     {
-      id: 'Notes',
-      label: 'Announcements',
+      id: 'Students',
+      label: 'Student Management',
       roles: ['grandmaster', 'master', 'admin', 'senior'],
       submodules: [
-        { id: 'all', label: 'All Announcements' },
-        { id: 'create', label: 'Create Announcement' },
-        { id: 'scheduled', label: 'Scheduled' },
-        { id: 'drafts', label: 'Drafts' },
-        { id: 'archived', label: 'Archived' },
+        { id: 'all', label: 'All Students' },
+        { id: 'add', label: 'Add Student' },
+        { id: 'requests', label: 'Registration Requests' },
+        { id: 'active', label: 'Active Students' },
+        { id: 'inactive', label: 'Inactive / Suspended' },
+        { id: 'history', label: 'Student History' },
+        { id: 'belts', label: 'Belt Management' },
       ],
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" x2="8" y1="13" y2="13" />
-          <line x1="16" x2="8" y1="17" y2="17" />
-          <polyline points="10 9 9 9 8 9" />
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       ),
     },
+
+    // 6. Join Requests
+    {
+      id: 'JoinRequests',
+      label: 'Join Requests',
+      roles: ['grandmaster', 'master', 'admin'],
+      badge: pendingJoinCount,
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="8.5" cy="7" r="4" />
+          <line x1="20" y1="8" x2="20" y2="14" />
+          <line x1="23" y1="11" x2="17" y2="11" />
+        </svg>
+      ),
+    },
+
+    // 7. Dojo Profile
+    {
+      id: 'DojoProfile',
+      label: 'Dojo Profile',
+      roles: ['grandmaster', 'master', 'admin'],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 21h18" />
+          <path d="M5 21V7l7-4 7 4v14" />
+          <path d="M9 10h6v11H9z" />
+        </svg>
+      ),
+    },
+
+    // 8. Master Profile
+    {
+      id: 'MasterProfile',
+      label: 'Master Profile',
+      roles: ['grandmaster', 'master', 'admin'],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      ),
+    },
+
+    // 9. Reports & Analytics
     {
       id: 'Reports',
       label: 'Reports & Analytics',
@@ -187,9 +237,31 @@ export const MasterSidebar: React.FC<MasterSidebarProps> = ({
         </svg>
       ),
     },
+
+    // 10. Notifications / Announcements
+    {
+      id: 'Notes',
+      label: 'Notifications',
+      roles: ['grandmaster', 'master', 'admin', 'senior'],
+      submodules: [
+        { id: 'all', label: 'All Notifications' },
+        { id: 'create', label: 'Create Announcement' },
+        { id: 'scheduled', label: 'Scheduled Alerts' },
+        { id: 'drafts', label: 'Drafts' },
+        { id: 'archived', label: 'Archived' },
+      ],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      ),
+    },
+
+    // 11. Settings
     {
       id: 'Settings',
-      label: 'Master Settings',
+      label: 'Settings',
       roles: ['grandmaster', 'master', 'admin', 'senior'],
       submodules: [
         { id: 'profile', label: 'My Profile' },
@@ -204,6 +276,77 @@ export const MasterSidebar: React.FC<MasterSidebarProps> = ({
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3" />
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      ),
+    },
+
+    // GrandMaster & Organization Admin Tabs
+    {
+      id: 'Dojos',
+      label: 'All Dojos Registry',
+      roles: ['grandmaster', 'admin'],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Seniors',
+      label: 'Senior Instructors',
+      roles: ['grandmaster', 'admin'],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Grading',
+      label: 'Belt Grading & Dan',
+      roles: ['grandmaster', 'admin'],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="8" r="7" />
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Achievements',
+      label: 'Organization Honors',
+      roles: ['grandmaster', 'admin'],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+          <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+          <path d="M4 22h16" />
+          <path d="M10 14.66V17c0 .55-.45 1-1 1H7" />
+          <path d="M14 14.66V17c0 .55.45 1 1 1h2" />
+          <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Tournaments',
+      label: 'Tournaments & Cups',
+      roles: ['grandmaster', 'admin'],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+      ),
+    },
+    {
+      id: 'AuditLogs',
+      label: 'System Audit Logs',
+      roles: ['grandmaster', 'admin'],
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
         </svg>
       ),
     },
@@ -289,11 +432,28 @@ export const MasterSidebar: React.FC<MasterSidebarProps> = ({
                     <span className="master-nav-icon">{item.icon}</span>
                     <span className="master-nav-label" style={{ fontSize: '13px' }}>{item.label}</span>
                   </div>
-                  {hasSubmodules && (
-                    <span style={{ fontSize: '10px', color: isActive ? '#ef4444' : '#64748b' }}>
-                      {isActive ? '▾' : '▸'}
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span
+                        style={{
+                          background: '#ef4444',
+                          color: '#ffffff',
+                          fontSize: '10px',
+                          fontWeight: 800,
+                          padding: '1px 7px',
+                          borderRadius: '10px',
+                          lineHeight: '14px',
+                        }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                    {hasSubmodules && (
+                      <span style={{ fontSize: '10px', color: isActive ? '#ef4444' : '#64748b' }}>
+                        {isActive ? '▾' : '▸'}
+                      </span>
+                    )}
+                  </div>
                 </button>
 
                 {/* Submodule Items when active */}

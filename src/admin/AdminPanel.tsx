@@ -37,6 +37,9 @@ import { TabSeniors } from './tabs/TabSeniors'
 import { TabBeltGrading } from './tabs/TabBeltGrading'
 import { TabAuditLogs } from './tabs/TabAuditLogs'
 import { TabReports } from './tabs/TabReports'
+import { TabMasterProfile } from './tabs/TabMasterProfile'
+import { TabDojoProfile } from './tabs/TabDojoProfile'
+import { TabJoinRequests } from './tabs/TabJoinRequests'
 
 // Modals
 import { StudentDetailModal } from './modals/StudentDetailModal'
@@ -230,20 +233,50 @@ export default function AdminPanel({ onSignOut, userSession }: AdminPanelProps) 
               upcomingTournamentCount={userSession?.role === 'grandmaster' ? 3 : 1}
               pendingApprovalsCount={pendingRegistrationsCount}
               activities={activities}
-              onNavigate={(tab) => {
+              onNavigate={(tab, sub) => {
                 setActiveTab(tab)
-                setActiveSubTab(undefined)
+                setActiveSubTab(sub)
               }}
-              onOpenApprovals={() => setPendingApprovalsOpen(true)}
+              onOpenApprovals={() => setActiveTab('JoinRequests')}
             />
           )}
 
-          {/* TAB: DOJOS DIRECTORY & APPROVALS */}
+          {/* TAB: JOIN REQUESTS */}
+          {activeTab === 'JoinRequests' && (
+            <TabJoinRequests
+              onNavigateTab={(tab, sub) => {
+                setActiveTab(tab)
+                if (sub) setActiveSubTab(sub)
+              }}
+            />
+          )}
+
+          {/* TAB: DOJO PROFILE */}
+          {activeTab === 'DojoProfile' && (
+            <TabDojoProfile
+              onNavigateTab={(tab, sub) => {
+                setActiveTab(tab)
+                if (sub) setActiveSubTab(sub)
+              }}
+            />
+          )}
+
+          {/* TAB: MASTER PROFILE */}
+          {activeTab === 'MasterProfile' && (
+            <TabMasterProfile
+              onNavigateTab={(tab, sub) => {
+                setActiveTab(tab)
+                if (sub) setActiveSubTab(sub)
+              }}
+            />
+          )}
+
+          {/* TAB: DOJOS DIRECTORY & APPROVALS (GRANDMASTER) */}
           {activeTab === 'Dojos' && (
             <TabDojos role={userSession?.role} />
           )}
 
-          {/* TAB 2: MY PROFILE */}
+          {/* TAB 2: MY PROFILE (LEGACY) */}
           {activeTab === 'Profile' && (
             <TabProfile
               profile={profile}

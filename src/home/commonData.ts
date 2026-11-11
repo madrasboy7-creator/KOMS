@@ -4,24 +4,34 @@ export interface PublicDojo {
   badge: string
   area: string
   city: string
+  state?: string
+  country?: string
+  pincode?: string
   address: string
   landmarks: string
   headInstructor: string
   instructorRank: string
   instructorExperience: string
+  instructorAvatar?: string
+  instructorBio?: string
+  instructorQualifications?: string
+  instructorAchievements?: string[]
   trainingDays: string[]
   timings: { batch: string; time: string; days: string }[]
   batches: { name: string; ageGroup: string; focus: string }[]
   levelsOffered: string[]
+  facilities?: string[]
   entryFee: number
   monthlyFee: number
   phone: string
   email: string
   description: string
   bannerUrl: string
+  logoUrl?: string
   gallery: string[]
   activeEvents: string[]
   isFeatured: boolean
+  status?: 'ACTIVE' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'INACTIVE'
 }
 
 export interface PublicMaster {
@@ -101,9 +111,14 @@ export const approvedDojos: PublicDojo[] = [
     city: 'Chennai - 600 048',
     address: '1/38 2nd Street, Ranga Nagar, Mudichur, Chennai - 600 048, Tamil Nadu',
     landmarks: 'Near Mudichur High Road, adjacent to Gangai Street bus stop',
-    headInstructor: 'Sensei Ashokan A. (Branch Head) & Kyoshi B. Mathan',
-    instructorRank: '3rd Dan Black Belt / 5th Dan Kyoshi',
-    instructorExperience: '12+ Years in Okinawan Shorin-Ryu Karate & Self-Defense',
+    headInstructor: 'Sensei Rubeshwaren',
+    instructorRank: '4th Dan Black Belt',
+    instructorExperience: '16 Years in Okinawan Shorin-Ryu Karate & Kobudo',
+    instructorAvatar: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=300',
+    instructorBio: 'Dedicated martial artist with over 16 years of rigorous training in traditional Okinawan Shorin-Ryu Karate and Kobudo weapons arts. Specializes in youth character development and competition kata excellence.',
+    instructorQualifications: 'Certified National Karate Referee (WKF Rules) & Senior Kobudo Instructor',
+    instructorAchievements: ['4th Dan Black Belt (Renmei Board)', 'National Karate Championship Gold (2012)', 'Best Instructor Award (2019)'],
+    status: 'ACTIVE',
     trainingDays: ['Monday', 'Wednesday', 'Friday', 'Sunday'],
     timings: [
       { batch: 'Junior Dragons (Ages 5–11)', time: '5:30 PM – 6:45 PM', days: 'Mon, Wed, Fri' },

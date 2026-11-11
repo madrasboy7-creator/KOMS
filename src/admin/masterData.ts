@@ -18,17 +18,30 @@ export interface MasterStudent {
 }
 
 export interface MasterProfileData {
+  id?: string
   name: string
   role: string
   dojo: string
-  age: number
+  dojoId?: string
+  age?: number
+  gender?: string
+  dob?: string
   phone: string
   email: string
+  address?: string
+  danRank?: string
+  rank?: string
   experience: string
+  teachingExperience?: string
+  qualifications?: string
   trainedBy: string
   style: string
   achievements: string[]
   avatar: string
+  biography?: string
+  socialWebsite?: string
+  socialInstagram?: string
+  socialFacebook?: string
 }
 
 export interface MasterAchievement {
@@ -83,20 +96,34 @@ export interface MasterActivityItem {
 export const initialMasterProfile: MasterProfileData = {
   name: 'Sensei Rubeshwaren',
   role: 'Master / Sensei',
-  dojo: 'Ranga Nagar Dojo, Chennai',
+  dojo: 'MASS DRAGON DOJO — Ranga Nagar Dojo',
+  dojoId: 'dojo-ranganagar',
   age: 38,
+  gender: 'Male',
+  dob: '1988-08-15',
   phone: '+91 96001 03987',
   email: 'rubeshwaren@koms.in',
+  address: '1/38 2nd Street, Ranga Nagar, Mudichur, Chennai - 600048, Tamil Nadu',
+  danRank: '4th Dan Black Belt',
+  rank: '4th Dan Black Belt',
   experience: '16 Years',
+  teachingExperience: '11 Years Chief Instructor at Ranga Nagar Branch',
+  qualifications: 'Certified National Karate Referee (WKF Rules) & Senior Kobudo Instructor',
   trainedBy: 'Hanshi Grand Master (9th Dan)',
   style: 'Okinawa Shorin Ryu Matsumura Seito & Kobudo',
   achievements: [
-    '4th Dan Black Belt',
-    'National Karate Championship (2012)',
-    'International Karate Seminar (2016)',
-    'Best Instructor Award (2019)',
+    '4th Dan Black Belt (Certified Renmei Okinawan Board)',
+    'National Karate Championship Gold Medalist (2012)',
+    'International Okinawan Budo Seminar Lead (2016)',
+    'Best Martial Arts Instructor Award (2019)',
+    'State Kobudo Championship Head Coach (2024)',
   ],
   avatar: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=300',
+  biography:
+    'Dedicated martial artist with over 16 years of rigorous training in traditional Okinawan Shorin-Ryu Karate and Kobudo weapons arts. Specializes in youth character development, anti-bullying self-defense, and competition kata excellence. Founder and head instructor at MASS DRAGON DOJO Ranga Nagar branch.',
+  socialWebsite: 'https://koms-karate.org/ranganagar',
+  socialInstagram: '@sensei_rubesh_karate',
+  socialFacebook: 'facebook.com/massdragondojo',
 }
 
 export const initialMasterStudents: MasterStudent[] = [

@@ -92,9 +92,23 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
   // Training Levels FAQ toggle
   const [activeFaqIndex, setActiveFaqIndex] = useState<number | null>(0)
 
+  // Live synchronized public dojos from komsStore
+  const [publicDojos, setPublicDojos] = useState<PublicDojo[]>(() => komsStore.getPublicDojos())
+
+  useEffect(() => {
+    return komsStore.subscribe(() => {
+      const refreshed = komsStore.getPublicDojos()
+      setPublicDojos(refreshed)
+      if (selectedDojoModal) {
+        const found = refreshed.find((d) => d.id === selectedDojoModal.id)
+        if (found) setSelectedDojoModal(found)
+      }
+    })
+  }, [selectedDojoModal])
+
   // Join Us Form State
   const [joinStep, setJoinStep] = useState<1 | 2 | 3 | 4>(1)
-  const [joinDojoId, setJoinDojoId] = useState(approvedDojos[0].id)
+  const [joinDojoId, setJoinDojoId] = useState(() => (komsStore.getPublicDojos()[0]?.id || 'dojo-ranganagar'))
   const [joinCategory, setJoinCategory] = useState('Junior Dragons (Ages 5–11)')
   const [studentFullName, setStudentFullName] = useState('')
   const [studentDob, setStudentDob] = useState('')
@@ -167,7 +181,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
 
   // Filtered Dojos
   const filteredDojos = useMemo(() => {
-    return approvedDojos.filter((d) => {
+    return publicDojos.filter((d) => {
       const matchSearch =
         d.name.toLowerCase().includes(dojoSearch.toLowerCase()) ||
         d.area.toLowerCase().includes(dojoSearch.toLowerCase()) ||
@@ -234,7 +248,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
       return
     }
 
-    const targetDojo = approvedDojos.find((d) => d.id === joinDojoId) || approvedDojos[0]
+    const targetDojo = publicDojos.find((d) => d.id === joinDojoId) || publicDojos[0]
 
     const newEnquiry = komsStore.submitRegistrationEnquiry({
       studentName: studentFullName.trim(),
@@ -861,12 +875,12 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                   className="koms-btn koms-btn--outline"
                   onClick={() => navigateTo('dojos')}
                 >
-                  View All Dojos ({approvedDojos.length})
+                  View All Dojos ({publicDojos.length})
                 </button>
               </div>
 
               <div className="dojos-grid">
-                {approvedDojos.slice(0, 3).map((dojo) => (
+                {publicDojos.slice(0, 3).map((dojo) => (
                   <article key={dojo.id} className="dojo-card">
                     <div className="dojo-card-image">
                       <img src={dojo.bannerUrl} alt={dojo.name} />
@@ -1343,7 +1357,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                     <button
                       className="koms-btn koms-btn--primary"
                       onClick={() => {
-                        const targetDojo = approvedDojos.find((d) => d.id === m.associatedDojoIds[0])
+                        const targetDojo = publicDojos.find((d) => d.id === m.associatedDojoIds[0])
                         if (targetDojo) setSelectedDojoModal(targetDojo)
                       }}
                     >
@@ -1818,7 +1832,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                             value={joinDojoId}
                             onChange={(e) => setJoinDojoId(e.target.value)}
                           >
-                            {approvedDojos.map((d) => (
+                            {publicDojos.map((d) => (
                               <option key={d.id} value={d.id}>
                                 {d.name} ({d.area}) — Head: {d.headInstructor}
                               </option>
@@ -1827,7 +1841,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                         </div>
                         <div className="form-group full">
                           {(() => {
-                            const d = approvedDojos.find((x) => x.id === joinDojoId) || approvedDojos[0]
+                            const d = publicDojos.find((x) => x.id === joinDojoId) || publicDojos[0]
                             return (
                               <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
                                 <strong>Selected Dojo:</strong> {d.name}<br />
@@ -2077,7 +2091,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                         <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px', fontSize: '12.5px' }}>
                           <strong>Application Summary:</strong><br />
                           <span>Student: <strong>{studentFullName}</strong> ({studentGender}, DOB: {studentDob || 'TBD'})</span><br />
-                          <span>Dojo: <strong>{approvedDojos.find((d) => d.id === joinDojoId)?.name}</strong></span><br />
+                          <span>Dojo: <strong>{publicDojos.find((d) => d.id === joinDojoId)?.name}</strong></span><br />
                           <span>Batch: <strong>{joinCategory}</strong></span><br />
                           <span>Contact: <strong>{guardianPhone}</strong> · {applicantEmail}</span>
                         </div>
@@ -2565,57 +2579,129 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
               </button>
             </div>
 
-            <div className="koms-modal-body">
-              <div style={{ height: '200px', borderRadius: '14px', overflow: 'hidden', marginBottom: '20px', position: 'relative' }}>
-                <img
-                  src={selectedDojoModal.bannerUrl}
-                  alt={selectedDojoModal.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    Location & Directions
-                  </h4>
-                  <p style={{ fontSize: '13px', color: '#1e293b', marginBottom: '6px' }}>
-                    <strong>Address:</strong> {selectedDojoModal.address}
-                  </p>
-                  <p style={{ fontSize: '12px', color: '#64748b' }}>
-                    <strong>Landmarks:</strong> {selectedDojoModal.landmarks}
-                  </p>
+            <div className="koms-modal-body" style={{ maxHeight: '80vh', overflowY: 'auto', paddingRight: '6px' }}>
+              {/* SECTION 1: DOJO OVERVIEW */}
+              <div style={{ borderRadius: '16px', overflow: 'hidden', marginBottom: '22px', border: '1px solid #e2e8f0', background: '#090d16' }}>
+                <div style={{ height: '220px', position: 'relative' }}>
+                  <img
+                    src={selectedDojoModal.bannerUrl}
+                    alt={selectedDojoModal.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(9,13,22,0.95) 0%, rgba(9,13,22,0.4) 60%, transparent 100%)' }} />
+                  <div style={{ position: 'absolute', top: '14px', left: '14px', background: '#b5121b', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 800 }}>
+                    {selectedDojoModal.badge}
+                  </div>
+                  <div style={{ position: 'absolute', top: '14px', right: '14px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(255,255,255,0.15)' }}>
+                    ₹{selectedDojoModal.monthlyFee} / month
+                  </div>
+                  <div style={{ position: 'absolute', bottom: '14px', left: '16px', right: '16px' }}>
+                    <h3 style={{ color: '#fff', fontSize: '20px', fontWeight: 800, margin: 0 }}>{selectedDojoModal.name}</h3>
+                    <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>📍 {selectedDojoModal.area}, {selectedDojoModal.city}</p>
+                  </div>
                 </div>
 
-                <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    Masters & Instructors
-                  </h4>
-                  <p style={{ fontSize: '13px', color: '#1e293b', marginBottom: '4px' }}>
-                    <strong>Head Sensei:</strong> {selectedDojoModal.headInstructor}
+                <div style={{ padding: '16px', background: '#ffffff', borderTop: '1px solid #f1f5f9' }}>
+                  <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.6', margin: '0 0 14px 0' }}>
+                    {selectedDojoModal.description}
                   </p>
-                  <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-                    <strong>Rank:</strong> {selectedDojoModal.instructorRank}
-                  </p>
-                  <small style={{ color: '#0f172a', fontWeight: 600 }}>{selectedDojoModal.instructorExperience}</small>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px', fontSize: '12.5px', color: '#1e293b' }}>
+                    <div>
+                      <strong style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', display: 'block' }}>Address:</strong>
+                      {selectedDojoModal.address}
+                    </div>
+                    <div>
+                      <strong style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', display: 'block' }}>Landmarks:</strong>
+                      {selectedDojoModal.landmarks || 'Near main road junction'}
+                    </div>
+                  </div>
+
+                  {/* Facilities */}
+                  {selectedDojoModal.facilities && selectedDojoModal.facilities.length > 0 && (
+                    <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                        Dojo Facilities & Safety Standards:
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {selectedDojoModal.facilities.map((f, i) => (
+                          <span key={i} style={{ background: '#f1f5f9', color: '#334155', fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                            ✓ {f}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#b5121b', textTransform: 'uppercase', marginBottom: '10px' }}>
+              {/* SECTION 2: MASTER INFORMATION */}
+              <div style={{ background: '#090d16', border: '1px solid #1e293b', borderRadius: '16px', padding: '18px', marginBottom: '22px', color: '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid #1e293b', pb: '10px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Sensei / Master Profile
+                  </span>
+                  <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                    {selectedDojoModal.instructorRank}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                  <img
+                    src={selectedDojoModal.instructorAvatar || '/masters/master-mathan.jpeg'}
+                    alt={selectedDojoModal.headInstructor}
+                    style={{ width: '70px', height: '70px', borderRadius: '14px', objectFit: 'cover', border: '2px solid rgba(239, 68, 68, 0.5)', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                      {selectedDojoModal.headInstructor}
+                    </h4>
+                    <p style={{ fontSize: '12px', color: '#f87171', margin: '2px 0 6px 0', fontWeight: 600 }}>
+                      {selectedDojoModal.instructorRank} • {selectedDojoModal.instructorExperience}
+                    </p>
+                    {selectedDojoModal.instructorQualifications && (
+                      <p style={{ fontSize: '11.5px', color: '#cbd5e1', margin: '0 0 6px 0' }}>
+                        🎓 {selectedDojoModal.instructorQualifications}
+                      </p>
+                    )}
+                    {selectedDojoModal.instructorBio && (
+                      <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: '1.5', margin: '0 0 10px 0' }}>
+                        "{selectedDojoModal.instructorBio}"
+                      </p>
+                    )}
+                    {selectedDojoModal.instructorAchievements && selectedDojoModal.instructorAchievements.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                        {selectedDojoModal.instructorAchievements.map((ach, idx) => (
+                          <span key={idx} style={{ background: '#1e293b', color: '#e2e8f0', fontSize: '10.5px', padding: '2px 8px', borderRadius: '8px', border: '1px solid #334155' }}>
+                            🏆 {ach}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: CLASS SCHEDULE */}
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '22px' }}>
+                <h4 style={{ fontSize: '12.5px', fontWeight: 800, color: '#b5121b', textTransform: 'uppercase', marginBottom: '10px' }}>
                   Training Schedule & Available Batches
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
                   {selectedDojoModal.timings.map((t) => (
-                    <div key={t.batch} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', borderBottom: '1px dashed #e2e8f0', paddingBottom: '6px' }}>
+                    <div key={t.batch} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', borderBottom: '1px dashed #e2e8f0', paddingBottom: '6px' }}>
                       <span style={{ fontWeight: 700, color: '#0f172a' }}>{t.batch} ({t.days})</span>
                       <span style={{ color: '#b5121b', fontWeight: 800 }}>{t.time}</span>
                     </div>
                   ))}
                 </div>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                  <strong>Training Days:</strong> {selectedDojoModal.trainingDays.join(', ')}
+                </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+              {/* SECTION 4: CONTACT & FEE STRUCTURE */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '22px' }}>
                 <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '14px', borderRadius: '12px' }}>
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Admission Entrance Fee</span>
                   <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>₹{selectedDojoModal.entryFee}</div>
@@ -2628,16 +2714,14 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                 </div>
               </div>
 
-              <p style={{ fontSize: '13px', color: '#334155', lineHeight: '1.6', marginBottom: '20px' }}>
-                {selectedDojoModal.description}
-              </p>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              {/* SECTION 5: ACTION BUTTON & CONTACT FOOTER */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: '12px', color: '#64748b' }}>
-                  Approved Contact: <strong>{selectedDojoModal.phone}</strong> · {selectedDojoModal.email}
+                  📞 <strong>{selectedDojoModal.phone}</strong> · ✉️ {selectedDojoModal.email}
                 </div>
                 <button
                   className="koms-btn koms-btn--primary"
+                  style={{ padding: '10px 22px', fontSize: '13px', fontWeight: 800, boxShadow: '0 4px 14px rgba(181, 18, 27, 0.4)' }}
                   onClick={() => {
                     const dojoId = selectedDojoModal.id
                     setSelectedDojoModal(null)
@@ -2645,7 +2729,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                   }}
                 >
                   <Icon name="checkCircle" size={16} />
-                  Enquire About Joining This Dojo
+                  Join This Dojo
                 </button>
               </div>
             </div>
@@ -2712,7 +2796,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
                 <button
                   className="koms-btn koms-btn--primary"
                   onClick={() => {
-                    const dojo = approvedDojos.find((d) => d.id === selectedMasterModal.associatedDojoIds[0])
+                    const dojo = publicDojos.find((d) => d.id === selectedMasterModal.associatedDojoIds[0])
                     setSelectedMasterModal(null)
                     if (dojo) setSelectedDojoModal(dojo)
                   }}
