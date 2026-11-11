@@ -3219,72 +3219,7 @@ export function GeneralHomeScreen({ onLoginSuccess }: GeneralHomeScreenProps) {
         </div>
       )}
 
-      {/* =========================================================================
-          FOOTER (SECTION I)
-          ========================================================================= */}
-      <footer className="home-footer">
-        <div className="home-footer-inner">
-          <div className="home-footer-grid">
-            <div className="home-footer-col">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                <img src={assetConfig.logo} alt="KOMS Logo" style={{ width: '40px', height: '40px', borderRadius: '8px', border: '1.5px solid #c8a951' }} />
-                <div>
-                  <strong style={{ fontSize: '16px', color: '#ffffff' }}>{cmsData.dojoBranding}</strong>
-                  <small style={{ display: 'block', color: '#c8a951', fontSize: '10px' }}>Kobudo Renmei Bukenkan - India</small>
-                </div>
-              </div>
-              <p style={{ fontSize: '12.5px', color: '#94a3b8', lineHeight: '1.6', marginBottom: '12px' }}>
-                Dedicated to classical Okinawan Shorin-Ryu Karate Do and traditional Kobudo weaponry.
-                Motto: <em>{cmsData.motto}</em>
-              </p>
-              <small style={{ color: '#64748b', fontSize: '11px' }}>
-                Honbu: {cmsData.contactAddress}
-              </small>
-            </div>
 
-            <div className="home-footer-col">
-              <h4>Navigation</h4>
-              <ul className="home-footer-links">
-                <li><button onClick={() => navigateTo('home')}>Home Overview</button></li>
-                <li><button onClick={() => navigateTo('dojos')}>Dojo Directory</button></li>
-                <li><button onClick={() => navigateTo('masters')}>Masters & Instructors</button></li>
-                <li><button onClick={() => navigateTo('belts')}>Training Levels & Belts</button></li>
-                <li><button onClick={() => navigateTo('events')}>Events & Tournaments</button></li>
-                <li><button onClick={() => navigateTo('gallery')}>Activity Gallery</button></li>
-              </ul>
-            </div>
-
-            <div className="home-footer-col">
-              <h4>Portals & Registration</h4>
-              <ul className="home-footer-links">
-                <li><button onClick={() => navigateTo('join-us')}>Join Us / Admission</button></li>
-                <li><button onClick={() => navigateTo('join-us')}>Track Application Status</button></li>
-                <li><button onClick={() => navigateTo('login')}>Student Portal Login</button></li>
-                <li><button onClick={() => navigateTo('login')}>Sensei / Master Portal</button></li>
-                <li><button onClick={() => navigateTo('login')}>Grand Master Administration</button></li>
-                <li><button onClick={() => setCmsModalOpen(true)}>Common UI CMS</button></li>
-              </ul>
-            </div>
-
-            <div className="home-footer-col">
-              <h4>Help & Legal</h4>
-              <ul className="home-footer-links">
-                <li><button onClick={() => navigateTo('help')}>Frequently Asked Questions</button></li>
-                <li><button onClick={() => navigateTo('help')}>Contact Administrative Support</button></li>
-                <li><button onClick={() => navigateTo('help')}>Privacy Policy (DPDP Act)</button></li>
-                <li><button onClick={() => navigateTo('help')}>Child & Guardian Privacy</button></li>
-                <li><button onClick={() => navigateTo('help')}>Photo & Media Consent</button></li>
-                <li><button onClick={() => navigateTo('tradition')}>Dojo Kun & Etiquette</button></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="home-footer-bottom">
-            <span>© 2026 Kobudo Renmei Bukenkan - India | MASS DRAGON DOJO (KOMS). All rights reserved.</span>
-            <span>Okinawan Shorin Ryu Karate Do Heritage · Chennai, Tamil Nadu</span>
-          </div>
-        </div>
-      </footer>
 
       {/* =========================================================================
           PINNED BOTTOM NAVIGATION BAR (MATCHING SCREENSHOT)
