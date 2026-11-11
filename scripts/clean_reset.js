@@ -28,3 +28,4 @@ console.log('  Attendance records:', db.prepare('SELECT count(*) as c FROM atten
 console.log('  Fee payments:', db.prepare('SELECT count(*) as c FROM fee_payments').get().c);
 console.log('  Join requests:', db.prepare('SELECT count(*) as c FROM join_requests').get().c);
 console.log('  Active Users:', db.prepare('SELECT email, role, status FROM users').all());
+

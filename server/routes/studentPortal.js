@@ -251,3 +251,4 @@ router.get('/fees', (req, res) => {
 });
 
 export default router;
+
