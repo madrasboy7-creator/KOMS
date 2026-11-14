@@ -1,0 +1,31 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Top curved roof beam -->
+    <path
+        android:pathData="M2,5.5 C8,4 16,4 22,5.5"
+        android:strokeWidth="2.2"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"/>
+    <!-- Secondary horizontal beam -->
+    <path
+        android:pathData="M4,9 L20,9"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"/>
+    <!-- Left vertical post -->
+    <path
+        android:pathData="M6.5,5.5 L6.5,21"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"/>
+    <!-- Right vertical post -->
+    <path
+        android:pathData="M17.5,5.5 L17.5,21"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"/>
+</vector>
+

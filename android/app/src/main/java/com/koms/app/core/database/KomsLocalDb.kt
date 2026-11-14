@@ -168,6 +168,25 @@ class KomsLocalDb(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, n
                 )
             }
         }
+        if (list.isEmpty()) {
+            val defaultDojos = listOf(
+                Dojo(
+                    id = "dojo-mass-dragon-dojo-ranga-nagar-dojo-955",
+                    name = "MASS DRAGON DOJO",
+                    badge = "Ranga Nagar Dojo",
+                    masterName = "Kyoshi Rubeshwaren",
+                    masterRank = "Senior Master • 6th Dan Black Belt (Kyoshi)",
+                    address = "#138 2nd Street, Ranga Nagar, Mudichur",
+                    city = "Chennai - 600048, Chennai",
+                    schedule = "Saturday, Sunday",
+                    style = "Okinawa Shorin Ryu",
+                    monthlyFee = 800,
+                    bannerUrl = "dojo_ranga_nagar"
+                )
+            )
+            saveDojos(defaultDojos)
+            return defaultDojos
+        }
         return list
     }
 

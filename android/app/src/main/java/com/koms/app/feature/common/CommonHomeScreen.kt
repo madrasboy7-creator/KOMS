@@ -5,17 +5,22 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -23,9 +28,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.koms.app.R
@@ -65,129 +72,177 @@ fun CommonHomeScreen(
 
     Scaffold(
         topBar = {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(DojoDarkBg)
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .background(Color(0xFF07090F))
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.koms_logo),
-                        contentDescription = "KOMS Crest",
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .border(1.5.dp, DojoGold, RoundedCornerShape(8.dp))
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "KOMS",
-                            color = DojoText,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.sp
-                        )
-                        Text(
-                            text = "KARATE ORGANIZATION SYSTEM",
-                            color = DojoGold,
-                            fontSize = 8.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                        Text(
-                            text = "Discipline • Strength • Internal Peace",
-                            color = DojoSubtext,
-                            fontSize = 7.5.sp
-                        )
-                    }
-                }
+                // Background Karate silhouette with Red Sun banner
+                Image(
+                    painter = painterResource(id = R.drawable.header_karate_bg),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(115.dp)
+                        .alpha(0.95f)
+                )
 
-                Button(
-                    onClick = { onNavigateToLogin("student") },
-                    colors = ButtonDefaults.buttonColors(containerColor = DojoRed),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                // Top gradient overlay to blend seamlessly
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(115.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color(0xE607090F),
+                                    Color(0x6607090F),
+                                    Color(0xE607090F)
+                                )
+                            )
+                        )
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Login", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = R.drawable.koms_logo),
+                            contentDescription = "KOMS Crest",
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .border(1.5.dp, DojoGold, RoundedCornerShape(8.dp))
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "KOMS",
+                                color = DojoText,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "KARATE ORGANIZATION SYSTEM",
+                                color = DojoGold,
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = "Discipline • Strength • Internal Peace",
+                                color = DojoSubtext,
+                                fontSize = 7.5.sp
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = { onNavigateToLogin("student") },
+                        colors = ButtonDefaults.buttonColors(containerColor = DojoRed),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Login,
+                                contentDescription = "Login",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text("Login", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
                 }
             }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xFF0A0D17),
-                tonalElevation = 8.dp,
-                modifier = Modifier.navigationBarsPadding()
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding(),
+                color = Color(0xFF090C16),
+                border = BorderStroke(1.dp, Color(0xFF141926))
             ) {
-                NavigationBarItem(
-                    selected = activeTab == "home",
-                    onClick = { activeTab = "home" },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("Home", fontSize = 10.sp, fontWeight = if (activeTab == "home") FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = DojoRed,
-                        selectedTextColor = DojoRed,
-                        unselectedIconColor = DojoSubtext,
-                        unselectedTextColor = DojoSubtext,
-                        indicatorColor = Color.Transparent
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val tabs = listOf(
+                        Triple("home", "Home", null),
+                        Triple("dojos", "Dojo", R.drawable.ic_torii_gate),
+                        Triple("events", "Events", null),
+                        Triple("gallery", "Gallery", null),
+                        Triple("belts", "Training Level", null)
                     )
-                )
-                NavigationBarItem(
-                    selected = activeTab == "dojos",
-                    onClick = { activeTab = "dojos" },
-                    icon = { Icon(Icons.Default.Place, contentDescription = "Dojo") },
-                    label = { Text("Dojo", fontSize = 10.sp, fontWeight = if (activeTab == "dojos") FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = DojoRed,
-                        selectedTextColor = DojoRed,
-                        unselectedIconColor = DojoSubtext,
-                        unselectedTextColor = DojoSubtext,
-                        indicatorColor = Color.Transparent
-                    )
-                )
-                NavigationBarItem(
-                    selected = activeTab == "events",
-                    onClick = { activeTab = "events" },
-                    icon = { Icon(Icons.Default.DateRange, contentDescription = "Events") },
-                    label = { Text("Events", fontSize = 10.sp, fontWeight = if (activeTab == "events") FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = DojoRed,
-                        selectedTextColor = DojoRed,
-                        unselectedIconColor = DojoSubtext,
-                        unselectedTextColor = DojoSubtext,
-                        indicatorColor = Color.Transparent
-                    )
-                )
-                NavigationBarItem(
-                    selected = activeTab == "gallery",
-                    onClick = { activeTab = "gallery" },
-                    icon = { Icon(Icons.Default.Image, contentDescription = "Gallery") },
-                    label = { Text("Gallery", fontSize = 10.sp, fontWeight = if (activeTab == "gallery") FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = DojoRed,
-                        selectedTextColor = DojoRed,
-                        unselectedIconColor = DojoSubtext,
-                        unselectedTextColor = DojoSubtext,
-                        indicatorColor = Color.Transparent
-                    )
-                )
-                NavigationBarItem(
-                    selected = activeTab == "belts",
-                    onClick = { activeTab = "belts" },
-                    icon = { Icon(Icons.Default.MilitaryTech, contentDescription = "Training Level") },
-                    label = { Text("Training Level", fontSize = 10.sp, fontWeight = if (activeTab == "belts") FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = DojoRed,
-                        selectedTextColor = DojoRed,
-                        unselectedIconColor = DojoSubtext,
-                        unselectedTextColor = DojoSubtext,
-                        indicatorColor = Color.Transparent
-                    )
-                )
+
+                    tabs.forEach { (tabId, label, customIconRes) ->
+                        val isSelected = activeTab == tabId
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { activeTab = tabId }
+                                .padding(vertical = 2.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            if (customIconRes != null) {
+                                Icon(
+                                    painter = painterResource(id = customIconRes),
+                                    contentDescription = label,
+                                    tint = if (isSelected) DojoRed else DojoSubtext,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            } else {
+                                val icon = when (tabId) {
+                                    "home" -> Icons.Default.Home
+                                    "events" -> Icons.Default.CalendarMonth
+                                    "gallery" -> Icons.Default.Image
+                                    else -> Icons.Default.EmojiEvents
+                                }
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = label,
+                                    tint = if (isSelected) DojoRed else DojoSubtext,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(3.dp))
+
+                            Text(
+                                text = label,
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) DojoRed else DojoSubtext
+                            )
+
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(28.dp)
+                                        .height(2.5.dp)
+                                        .background(DojoRed, RoundedCornerShape(1.dp))
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.height(2.5.dp))
+                            }
+                        }
+                    }
+                }
             }
         },
         containerColor = DojoDarkBg
@@ -213,7 +268,7 @@ fun CommonHomeScreen(
                     }
                 )
                 "dojos" -> DojosTabContent(
-                    dojos = dojos.filter { it.name.contains(dojoSearch, ignoreCase = true) || it.city.contains(dojoSearch, ignoreCase = true) },
+                    dojos = dojos,
                     searchQuery = dojoSearch,
                     onSearchChange = { dojoSearch = it },
                     onEnroll = { dojo -> onNavigateToStudentRegister(dojo.name) },
@@ -764,114 +819,511 @@ fun DojosTabContent(
 ) {
     var selectedLocationFilter by remember { mutableStateOf("All Dojos") }
 
-    Column(modifier = Modifier.fillMaxSize().padding(14.dp)) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchChange,
-            placeholder = { Text("Search dojo by name or location...", color = DojoSubtext, fontSize = 13.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = DojoSubtext) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = DojoCardBg,
-                unfocusedContainerColor = DojoCardBg,
-                focusedBorderColor = DojoRed,
-                unfocusedBorderColor = Color(0xFF222F4A),
-                focusedTextColor = DojoText,
-                unfocusedTextColor = DojoText
-            )
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Location Filter Pills
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        // Search & Filter Box
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .background(Color(0xFF0F1524), RoundedCornerShape(24.dp))
+                .border(1.dp, Color(0xFF1E283D), RoundedCornerShape(24.dp))
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            listOf("All Dojos", "Perungalathur", "Mudichur", "Anna Nagar").forEach { loc ->
-                val isSelected = selectedLocationFilter == loc
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { selectedLocationFilter = loc },
-                    label = { Text(loc, fontSize = 10.5.sp) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = DojoRed,
-                        selectedLabelColor = Color.White,
-                        containerColor = DojoSurface,
-                        labelColor = DojoSubtext
-                    )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color(0xFF94A3B8),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchChange,
+                    singleLine = true,
+                    textStyle = TextStyle(
+                        color = Color.White,
+                        fontSize = 13.5.sp
+                    ),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { innerTextField ->
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Search dojo by name or location...",
+                                color = Color(0xFF64748B),
+                                fontSize = 13.sp
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = "Filter",
+                    tint = Color(0xFF94A3B8),
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = "Approved Karate & Kobudo Dojos (${dojos.size})",
-            color = DojoGold,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold
-        )
+        // Horizontal Location Filter Pills
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Pill 1: All Dojos (Torii gate icon)
+            val isAllSelected = selectedLocationFilter == "All Dojos"
+            Surface(
+                onClick = { selectedLocationFilter = "All Dojos" },
+                shape = RoundedCornerShape(20.dp),
+                color = if (isAllSelected) DojoRed else Color(0xFF0E1422),
+                border = if (isAllSelected) null else BorderStroke(1.dp, Color(0xFF1E283D))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_torii_gate),
+                        contentDescription = null,
+                        tint = if (isAllSelected) Color.White else Color(0xFF94A3B8),
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "All Dojos",
+                        color = if (isAllSelected) Color.White else Color(0xFFCBD5E1),
+                        fontSize = 12.sp,
+                        fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        val filteredList = dojos.filter {
-            (selectedLocationFilter == "All Dojos" || it.address.contains(selectedLocationFilter, ignoreCase = true) || it.name.contains(selectedLocationFilter, ignoreCase = true))
+            // Location Pills: Perungalathur, Mudichur, Anna Nagar
+            listOf("Perungalathur", "Mudichur", "Anna Nagar").forEach { loc ->
+                val isSelected = selectedLocationFilter == loc
+                Surface(
+                    onClick = { selectedLocationFilter = loc },
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isSelected) DojoRed else Color(0xFF0E1422),
+                    border = if (isSelected) null else BorderStroke(1.dp, Color(0xFF1E283D))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = if (isSelected) Color.White else Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = loc,
+                            color = if (isSelected) Color.White else Color(0xFFCBD5E1),
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
+                }
+            }
         }
 
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Filter list
+        val filteredList = dojos.filter { dojo ->
+            val matchesQuery = searchQuery.isBlank() ||
+                dojo.name.contains(searchQuery, ignoreCase = true) ||
+                dojo.address.contains(searchQuery, ignoreCase = true) ||
+                dojo.city.contains(searchQuery, ignoreCase = true) ||
+                dojo.masterName.contains(searchQuery, ignoreCase = true)
+
+            val matchesLocation = when (selectedLocationFilter) {
+                "All Dojos" -> true
+                else -> dojo.address.contains(selectedLocationFilter, ignoreCase = true) ||
+                    dojo.city.contains(selectedLocationFilter, ignoreCase = true) ||
+                    dojo.name.contains(selectedLocationFilter, ignoreCase = true)
+            }
+            matchesQuery && matchesLocation
+        }
+
+        // Section Title Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(3.5.dp)
+                        .height(18.dp)
+                        .background(DojoRed, RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Approved Karate & Kobudo Dojos (${filteredList.size})",
+                    color = Color.White,
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Surface(
+                color = Color(0xFF081C12),
+                border = BorderStroke(1.dp, Color(0xFF15803D)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color(0xFF22C55E),
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = "Verified",
+                        color = Color(0xFF22C55E),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         if (filteredList.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No matching dojos found.", color = DojoSubtext, fontSize = 13.sp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 40.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No matching dojos found.",
+                    color = DojoSubtext,
+                    fontSize = 13.sp
+                )
             }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
                 items(filteredList) { dojo ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = DojoCardBg),
-                        shape = RoundedCornerShape(14.dp),
-                        border = CardDefaults.outlinedCardBorder().copy(brush = Brush.linearGradient(listOf(Color(0xFF1E283D), Color(0xFF141926))))
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(dojo.name, color = DojoText, fontSize = 15.5.sp, fontWeight = FontWeight.Bold)
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = { Text("₹${dojo.monthlyFee}/mo", color = DojoGreen, fontSize = 11.5.sp, fontWeight = FontWeight.Bold) },
-                                    colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFF0D2818)),
-                                    border = BorderStroke(1.dp, DojoGreen)
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1322)),
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(
+                            1.2.dp,
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0xFFEF4444).copy(alpha = 0.45f),
+                                    Color(0xFF1E283D)
                                 )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Sensei: ${dojo.masterName} (${dojo.masterRank})", color = DojoGold, fontSize = 12.5.sp, fontWeight = FontWeight.Medium)
-                            Text("📍 ${dojo.address}, ${dojo.city}", color = DojoSubtext, fontSize = 11.5.sp)
-                            Text("🕒 ${dojo.schedule}", color = DojoSubtext, fontSize = 11.5.sp)
-                            Text("🥋 Styles: ${dojo.style}", color = DojoSubtext, fontSize = 11.5.sp)
+                            )
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            // Left Column: Dojo Entrance Image
+                            Image(
+                                painter = painterResource(id = R.drawable.dojo_ranga_nagar),
+                                contentDescription = dojo.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .width(135.dp)
+                                    .height(180.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                            )
 
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            // Right Column: Details & Actions
+                            Column(
+                                modifier = Modifier.weight(1f)
                             ) {
-                                OutlinedButton(
-                                    onClick = { onSelectDetails(dojo) },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp)
+                                // Row 1: Dojo Name & Fee Pill
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Details", fontSize = 12.sp, color = DojoText)
+                                    val mainName = if (dojo.name.contains(" - ")) {
+                                        dojo.name.substringBefore(" - ").trim()
+                                    } else if (dojo.name.contains(" — ")) {
+                                        dojo.name.substringBefore(" — ").trim()
+                                    } else {
+                                        dojo.name
+                                    }
+
+                                    Text(
+                                        text = mainName,
+                                        color = Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    Surface(
+                                        color = Color(0xFF092E1B),
+                                        shape = RoundedCornerShape(14.dp),
+                                        border = BorderStroke(1.dp, Color(0xFF10B981))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color(0xFF10B981),
+                                                modifier = Modifier.size(11.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(3.dp))
+                                            Text(
+                                                text = "₹${dojo.monthlyFee} /mo",
+                                                color = Color(0xFF10B981),
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
                                 }
-                                Button(
-                                    onClick = { onEnroll(dojo) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = DojoRed),
-                                    shape = RoundedCornerShape(8.dp)
+
+                                // Row 2: Subtitle
+                                val subName = if (dojo.name.contains(" - ")) {
+                                    dojo.name.substringAfter(" - ").trim()
+                                } else if (dojo.name.contains(" — ")) {
+                                    dojo.name.substringAfter(" — ").trim()
+                                } else if (dojo.badge.isNotBlank()) {
+                                    dojo.badge
+                                } else {
+                                    "Ranga Nagar Dojo"
+                                }
+                                Text(
+                                    text = "— $subName",
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+
+                                Spacer(modifier = Modifier.height(7.dp))
+
+                                // Row 3: Address
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top
                                 ) {
-                                    Text("Enroll Now", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                    Icon(
+                                        imageVector = Icons.Default.LocationOn,
+                                        contentDescription = "Address",
+                                        tint = Color(0xFFF59E0B),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    val addrClean = if (dojo.address.contains("1/38")) {
+                                        dojo.address.replace("1/38", "#138")
+                                    } else if (dojo.address.contains("Ranga Nagar")) {
+                                        dojo.address
+                                    } else {
+                                        "#138 2nd Street, Ranga Nagar, Mudichur"
+                                    }
+                                    val addrText = if (addrClean.contains("Chennai - 600048")) {
+                                        if (addrClean.endsWith("Chennai")) addrClean else "$addrClean, Chennai"
+                                    } else {
+                                        "$addrClean, Chennai - 600048, Chennai"
+                                    }
+                                    Text(
+                                        text = addrText,
+                                        color = Color(0xFFCBD5E1),
+                                        fontSize = 10.5.sp,
+                                        lineHeight = 14.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+                                HorizontalDivider(color = Color(0xFF1E283D), thickness = 0.8.dp)
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                // Row 4: Schedule & Style
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CalendarMonth,
+                                        contentDescription = "Schedule",
+                                        tint = Color(0xFFCBD5E1),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    val cleanSchedule = dojo.schedule
+                                        .replace("[", "")
+                                        .replace("]", "")
+                                        .replace("\"", "")
+                                        .trim()
+                                        .ifBlank { "Saturday, Sunday" }
+                                    Text(
+                                        text = cleanSchedule,
+                                        color = Color(0xFFCBD5E1),
+                                        fontSize = 10.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = "|",
+                                        color = Color(0xFF334155),
+                                        fontSize = 10.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_karate_stance),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(
+                                        text = "Styles: ${dojo.style.ifBlank { "Okinawa Shorin Ryu" }}",
+                                        color = Color(0xFFCBD5E1),
+                                        fontSize = 10.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(7.dp))
+
+                                // Row 5: Sensei
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_gold_temple),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Column {
+                                        val rawMaster = dojo.masterName
+                                        val cleanMaster = rawMaster
+                                            .replace("(Senior Master)", "")
+                                            .replace("(SeniorMaster)", "")
+                                            .replace("(Kyoshi)", "")
+                                            .replace("()", "")
+                                            .trim()
+                                        val senseiName = when {
+                                            cleanMaster.startsWith("Kyoshi", ignoreCase = true) -> cleanMaster
+                                            cleanMaster.startsWith("Sensei", ignoreCase = true) -> cleanMaster
+                                            cleanMaster.isNotBlank() -> "Kyoshi $cleanMaster"
+                                            else -> "Kyoshi Rubeshwaren"
+                                        }
+                                        Text(
+                                            text = "Sensei: $senseiName",
+                                            color = Color(0xFFF5A000),
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "(Senior Master) (6th Dan Black Belt (Kyoshi))",
+                                            color = Color(0xFFFBBF24),
+                                            fontSize = 9.sp
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // Row 6: Details & Enroll Now buttons
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        onClick = { onSelectDetails(dojo) },
+                                        modifier = Modifier
+                                            .weight(0.44f)
+                                            .height(32.dp),
+                                        color = Color(0xFF0F1523),
+                                        border = BorderStroke(1.dp, Color(0xFF334155)),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Info,
+                                                contentDescription = "Details",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "Details",
+                                                color = Color.White,
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        onClick = { onEnroll(dojo) },
+                                        modifier = Modifier
+                                            .weight(0.56f)
+                                            .height(32.dp),
+                                        color = DojoRed,
+                                        shape = RoundedCornerShape(16.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_enroll_pencil),
+                                                contentDescription = "Enroll",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(5.dp))
+                                            Text(
+                                                text = "Enroll Now >",
+                                                color = Color.White,
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
