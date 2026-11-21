@@ -16,12 +16,14 @@ git add -A
 
 REM Check if there are changes to commit
 git diff-index --quiet HEAD --
-if %ERRORLEVEL% equ 0 (
+if !ERRORLEVEL! equ 0 (
     echo No new changes to commit. Pushing existing local commits...
 ) else (
-    set /p "commit_msg=Enter commit message (press Enter for default): "
-    if "!commit_msg!"=="" set "commit_msg=chore: update project files %date% %time%"
-    git commit -m "!commit_msg!"
+    set "user_msg=chore: sync project updates"
+    set "input_msg="
+    set /p "input_msg=Enter commit message (press Enter for default): "
+    if defined input_msg set "user_msg=!input_msg!"
+    git commit -m "!user_msg!"
 )
 
 echo.
@@ -29,17 +31,17 @@ echo Pushing to GitHub (origin/main)...
 git push origin main
 
 echo.
-if %ERRORLEVEL% equ 0 (
+if !ERRORLEVEL! equ 0 (
     echo =======================================================
     echo  SUCCESS: Your updates have been pushed to GitHub!
     echo =======================================================
 ) else (
     echo =======================================================
-    echo  Push failed. If prompted, please provide your GitHub
-    echo  Personal Access Token (PAT) or credentials.
+    echo  Push failed. Check your network or GitHub credentials.
     echo =======================================================
 )
 
 pause
+
 
 
