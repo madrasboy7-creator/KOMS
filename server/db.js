@@ -414,11 +414,38 @@ function createSqliteAdapter(dbPath) {
       reason TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS galleries (
+      id TEXT PRIMARY KEY,
+      dojo_id TEXT,
+      title TEXT NOT NULL,
+      description TEXT,
+      category TEXT NOT NULL DEFAULT 'Events',
+      location TEXT,
+      event_date TEXT,
+      cover_image TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'published' CHECK(status IN ('draft', 'published', 'archived')),
+      created_by INTEGER,
+      updated_by INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS gallery_images (
+      id TEXT PRIMARY KEY,
+      gallery_id TEXT NOT NULL REFERENCES galleries(id) ON DELETE CASCADE,
+      image_url TEXT NOT NULL,
+      image_order INTEGER DEFAULT 0,
+      alt_text TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_users_role ON users(role, status);
     CREATE INDEX IF NOT EXISTS idx_dojos_status ON dojos(status);
     CREATE INDEX IF NOT EXISTS idx_join_requests_dojo ON join_requests(dojo_id, status);
     CREATE INDEX IF NOT EXISTS idx_master_apps_status ON master_applications(status);
+    CREATE INDEX IF NOT EXISTS idx_galleries_category ON galleries(category, status);
+    CREATE INDEX IF NOT EXISTS idx_gallery_images_gallery ON gallery_images(gallery_id, image_order);
   `);
 
   try {

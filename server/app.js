@@ -17,6 +17,7 @@ import announcementRoutes from './routes/announcements.js';
 import dojosRoutes from './routes/dojos.js';
 import grandmasterRoutes from './routes/grandmaster.js';
 import studentPortalRoutes from './routes/studentPortal.js';
+import galleryRoutes from './routes/gallery.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +63,8 @@ export function createApp() {
   app.use('/api/dojos', dojosRoutes);
   app.use('/api/grandmaster', grandmasterRoutes);
   app.use('/api/student', studentPortalRoutes);
+  app.use('/api/public/gallery', galleryRoutes);
+  app.use('/api/gallery', galleryRoutes);
 
   // Serve static assets if client is built
   const distPath = path.join(__dirname, '..', 'dist');

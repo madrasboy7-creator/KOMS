@@ -97,3 +97,33 @@ data class AppVersionInfo(
     val releaseNotes: List<String> = emptyList()
 )
 
+data class GalleryImage(
+    val id: String = "",
+    val galleryId: String = "",
+    val imageUrl: String = "",
+    val imageOrder: Int = 0,
+    val altText: String = ""
+)
+
+data class GalleryItem(
+    val id: String = "",
+    val dojoId: String? = null,
+    val title: String = "",
+    val description: String = "",
+    val category: String = "Events",
+    val location: String = "Chennai, Tamil Nadu",
+    val eventDate: String = "",
+    val coverImage: String = "",
+    val imageCount: Int = 1,
+    val images: List<GalleryImage> = emptyList()
+)
+
+data class GalleryResponse(
+    val items: List<GalleryItem> = emptyList(),
+    val total: Int = 0,
+    val page: Int = 1,
+    val limit: Int = 4,
+    val totalPages: Int = 1
+)
+
+

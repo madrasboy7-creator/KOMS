@@ -1366,47 +1366,6 @@ fun EventsTabContent() {
 }
 
 @Composable
-fun GalleryTabContent() {
-    val highlights = listOf(
-        "State Championship Gold Medalists" to "2026 Chennai Arena · 14 Golds",
-        "Senior Dan Black Belt Promotions" to "Okinawan Technical Committee Certification",
-        "Matayoshi Weapons Training Clinic" to "Bo, Sai, Nunchaku, Kama & Tonfa",
-        "Junior Kata & Kihon Showcase" to "Mudichur Branch Dojo Summer Camp"
-    )
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            Text("Activity & Championship Highlights", color = DojoGold, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(4.dp))
-        }
-        items(highlights) { (title, subtitle) ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = DojoCardBg),
-                shape = RoundedCornerShape(12.dp),
-                border = CardDefaults.outlinedCardBorder().copy(brush = Brush.linearGradient(listOf(Color(0xFF1E283D), Color(0xFF141926))))
-            ) {
-                Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(54.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF161E30)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("🥋", fontSize = 24.sp)
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(title, color = DojoText, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
-                        Text(subtitle, color = DojoSubtext, fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun BeltsTabContent() {
     val belts = listOf(
         Triple("White Belt (10th & 9th Kyu)", "Minimum: 3 Months", "Fundamental stances (Zenkutsu, Kokutsu), blocks (Gedan Barai, Age Uke), basic punches (Seiken Tsuki)."),

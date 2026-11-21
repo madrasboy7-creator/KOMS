@@ -4,6 +4,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.koms.app.core.model.*
 
 class KomsLocalDb(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
@@ -103,6 +105,21 @@ class KomsLocalDb(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, n
                 payload_json TEXT,
                 created_at INTEGER,
                 status TEXT
+            )
+        """.trimIndent())
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS galleries (
+                id TEXT PRIMARY KEY,
+                dojo_id TEXT,
+                title TEXT,
+                description TEXT,
+                category TEXT,
+                location TEXT,
+                event_date TEXT,
+                cover_image TEXT,
+                image_count INTEGER,
+                images_json TEXT
             )
         """.trimIndent())
     }
@@ -395,6 +412,73 @@ class KomsLocalDb(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, n
     fun removePendingSync(id: String) {
         val db = writableDatabase
         db.delete("pending_sync", "id = ?", arrayOf(id))
+    }
+
+    // --- GALLERIES ---
+    private val gson = Gson()
+
+    fun saveGalleries(galleries: List<GalleryItem>) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            for (g in galleries) {
+                val cv = ContentValues().apply {
+                    put("id", g.id)
+                    put("dojo_id", g.dojoId)
+                    put("title", g.title)
+                    put("description", g.description)
+                    put("category", g.category)
+                    put("location", g.location)
+                    put("event_date", g.eventDate)
+                    put("cover_image", g.coverImage)
+                    put("image_count", g.imageCount)
+                    put("images_json", gson.toJson(g.images))
+                }
+                db.insertWithOnConflict("galleries", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun getGalleries(category: String = "All"): List<GalleryItem> {
+        val list = mutableListOf<GalleryItem>()
+        val db = readableDatabase
+        val isAll = category.isBlank() || category.equals("All", ignoreCase = true)
+        val query = if (isAll) "SELECT * FROM galleries" else "SELECT * FROM galleries WHERE LOWER(category) = LOWER(?)"
+        val args = if (isAll) null else arrayOf(category)
+        
+        try {
+            val cursor = db.rawQuery(query, args)
+            cursor.use { c ->
+                val imagesType = object : TypeToken<List<GalleryImage>>() {}.type
+                while (c.moveToNext()) {
+                    val rawImages = c.getString(c.getColumnIndexOrThrow("images_json"))
+                    val images: List<GalleryImage> = try {
+                        gson.fromJson(rawImages, imagesType) ?: emptyList()
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+
+                    list.add(
+                        GalleryItem(
+                            id = c.getString(c.getColumnIndexOrThrow("id")),
+                            dojoId = c.getString(c.getColumnIndexOrThrow("dojo_id")),
+                            title = c.getString(c.getColumnIndexOrThrow("title")),
+                            description = c.getString(c.getColumnIndexOrThrow("description")),
+                            category = c.getString(c.getColumnIndexOrThrow("category")),
+                            location = c.getString(c.getColumnIndexOrThrow("location")),
+                            eventDate = c.getString(c.getColumnIndexOrThrow("event_date")),
+                            coverImage = c.getString(c.getColumnIndexOrThrow("cover_image")),
+                            imageCount = c.getInt(c.getColumnIndexOrThrow("image_count")),
+                            images = images
+                        )
+                    )
+                }
+            }
+        } catch (_: Exception) {}
+        return list
     }
 }
 

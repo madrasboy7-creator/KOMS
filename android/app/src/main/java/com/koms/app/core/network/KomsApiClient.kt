@@ -429,5 +429,60 @@ class KomsApiClient(private val context: Context) {
             Result.failure(e)
         }
     }
+
+    suspend fun getPublicGalleries(category: String = "All", page: Int = 1, limit: Int = 4): Result<GalleryResponse> = withContext(Dispatchers.IO) {
+        try {
+            val url = "${baseUrl()}/api/public/gallery?category=$category&page=$page&limit=$limit"
+            var jsonBody: String? = null
+
+            try {
+                val req = Request.Builder().url(url).get().build()
+                client.newCall(req).execute().use { resp ->
+                    if (resp.isSuccessful) {
+                        jsonBody = resp.body?.string()
+                    }
+                }
+            } catch (_: Exception) {
+                // Try localhost fallback if USB reverse is active
+                try {
+                    val fallbackUrl = "http://localhost:5000/api/public/gallery?category=$category&page=$page&limit=$limit"
+                    val reqLocal = Request.Builder().url(fallbackUrl).get().build()
+                    client.newCall(reqLocal).execute().use { resp ->
+                        if (resp.isSuccessful) {
+                            jsonBody = resp.body?.string()
+                            sessionManager.setServerUrl("http://localhost:5000")
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+
+            if (jsonBody != null) {
+                val response = gson.fromJson(jsonBody, GalleryResponse::class.java)
+                Result.success(response)
+            } else {
+                Result.failure(Exception("Cannot connect to server to fetch gallery"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getGalleryDetail(id: String): Result<GalleryItem> = withContext(Dispatchers.IO) {
+        try {
+            val url = "${baseUrl()}/api/public/gallery/$id"
+            val req = Request.Builder().url(url).get().build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string() ?: ""
+                    val item = gson.fromJson(body, GalleryItem::class.java)
+                    Result.success(item)
+                } else {
+                    Result.failure(Exception("Gallery item not found"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 
